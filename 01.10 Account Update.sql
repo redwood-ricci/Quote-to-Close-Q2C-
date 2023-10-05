@@ -41,7 +41,7 @@ Select
 
 
 -- MIGRATION FIELDS 																						
-	'' as Migration_id__c
+	A.ID + '-NEO' as Migration_id__c
 
 INTO <staging>.dbo.Account_Update
 FROM <Source>.dbo.Account a
@@ -55,11 +55,18 @@ WHERE -- Surgical Filters to make sure each update doesn't go beyond the scope o
 ALTER TABLE <staging>.dbo.[Account_Load]
 ADD [Sort] int IDENTITY (1,1)
 
+
+---------------------------------------------------------------------------------
+-- Validations
+---------------------------------------------------------------------------------
+
+
+
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 
-EXEC <staging>.dbo.SF_Tableloader 'UPDATE: bulkapi, batchsize(10)', 'INSERT_LINKED_SERVER_NAME', 'Account_Load', 'Migration_Id__c'
+EXEC <staging>.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','INSERT_LINKED_SERVER_NAME','Account_Load'
 
 ---------------------------------------------------------------------------------
 -- Error Review	

@@ -20,32 +20,29 @@ USE <Source>;
 
 EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'Account'
 EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'PriceBook2'
-
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'sbqq__Quote__c'
 EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'Opportunity'
+-- Add any other objects as needed
 
 
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE <Source>;;
+USE <staging>;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Opportunity_Update' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE [Opportunity_Update]
+DROP TABLE <Staging>.dbo.[Opportunity_Update]
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
 ---------------------------------------------------------------------------------
-USE <Source>;
-
 
 Select 
 	A.ID as Id,
 	CAST('' as nvarchar(2000)) as Error,
-
+	A.AccountID as REF_AccountID,
 
 -- MIGRATION FIELDS 																						
-	'' as Migration_id__c
+	A.ID + '-NEO' as Opp_Migration_id__c
 
 INTO <Staging>.dbo.Opportunity_Update
 
@@ -53,23 +50,44 @@ FROM <Source>.dbo.Opportunity O
 LEFT OUTER JOIN <Source>.dbo.Account Acct 
 	ON a.AccountID = Acct.ID 
 
-LEFT OUTER JOIN <Source>.dbo.Pricebook2 PB 
-	ON PB.[Name] = 'XXXXXXXX'																								/* NEED TO UPDATE THE NAME */
-
+-- TBD if this join is needed
+INNER JOIN <Source>.dbo.Pricebook2 PB 
+	ON O.PricebookID = PB.ID
 	
 ORDER BY Acct.ID
 
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
 ---------------------------------------------------------------------------------
-ALTER TABLE [Opportunity_Update]
-ADD [Sort] int IDENTITY (1,1)
+ALTER TABLE <staging>.dbo.[Opportunity_Update]
+ADD [Sort] int 
+GO
+WITH NumberedRows AS (
+  SELECT *, ROW_NUMBER() OVER (ORDER BY REF_AccountID) AS OrderRowNumber
+  FROM <staging>.dbo.[Opportunity_Update]
+)
+UPDATE NumberedRows
+SET [Sort] = OrderRowNumber;
+
+
+---------------------------------------------------------------------------------
+-- Validations
+---------------------------------------------------------------------------------
+
+-- Double check there are no duplicate rows
+
+select Opp_Migration_id__c, count(*)
+from <staging>.dbo.[Opportunity_Update]
+group by Opp_Migration_id__c
+having count(*) > 1
+
+
 
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 USE <Staging>;
-EXEC <Staging>.dboSF_Tableloader 'UPDATE: Bulkapi, batchsize(10)', '<Source>', 'Opportunity_Update'
+EXEC <Staging>.dboSF_Tableloader 'UPDATE:Bulkapi,batchsize(10)','INSERT_LINKED_SERVER_NAME','Opportunity_Update'
 
 ---------------------------------------------------------------------------------
 -- Error Review	

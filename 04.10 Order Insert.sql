@@ -219,13 +219,27 @@ inner join  <Source>.dbo.Invoice__c Inv
 -- Add Sort Column to speed Bulk Load performance if necessary
 ---------------------------------------------------------------------------------
 ALTER TABLE <Staging>.dbo.[Order_Load]
-ADD [Sort] int IDENTITY (1,1)
+ADD [Sort] int 
+GO
+WITH NumberedRows AS (
+  SELECT *, ROW_NUMBER() OVER (ORDER BY AccountID) AS OrderRowNumber
+  FROM <staging>.dbo.[Order_Load]
+)
+UPDATE NumberedRows
+SET [Sort] = OrderRowNumber;
+
+
+---------------------------------------------------------------------------------
+-- Validations
+---------------------------------------------------------------------------------
+
+
 
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 
-EXEC <Staging>.dbo.SF_Tableloader 'INSERT: bulkapi, batchsize(10)', 'INSERT_LINKED_SERVER_NAME', 'Order_Load'
+EXEC <Staging>.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','INSERT_LINKED_SERVER_NAME','Order_Load'
 
 ---------------------------------------------------------------------------------
 -- Error Review	
