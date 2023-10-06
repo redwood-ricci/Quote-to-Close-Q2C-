@@ -1,0 +1,78 @@
+---------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------
+--- Title: CONTRACT RENEWAL FLAG UPDATE
+--- Customer: Redwood
+--- Primary Developer: Jim Ziller
+--- Secondary Developers:  Jim Ziller 
+--- Created Date: 10/6/2023
+--- Last Updated: 
+--- Change Log: 
+--- Prerequisites:
+--- 1. 1.10 Order
+--- 2. 1.20 Order Item
+--- 3. 1.30 Contract
+--- 4. 1.40 Subscription
+--- 5. 2.10 Order Update
+--- 6. 2.20 OrderItem Update
+--- 7. 5.10-Contract_Activate_UPDATE
+---------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------
+
+USE <Source>;
+
+---------------------------------------------------------------------------------
+--- COPY DATA FROM SALESFORCE
+---------------------------------------------------------------------------------
+EXEC <Source>.dbo.SF_Replicate 'INSERT LINKED SERVER HERE' ,'Contract', 'PkChunk'
+
+---------------------------------------------------------------------------------
+--- Drop Staging Table
+---------------------------------------------------------------------------------
+USE <Staging>;
+
+if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Contract_UPDATE_RenewalFlag' AND TABLE_SCHEMA = 'dbo')
+DROP TABLE <Staging>.dbo.Contract_UPDATE_RenewalFlag;
+
+
+select 
+	C.ID,
+	Cast('' as nvarchar(2000)) as Error,
+	C.Migrated_ID__c,
+	'true' as SBQQ__RenewalQuoted__c
+into <Staging>.dbo.Contract_UPDATE_RenewalFlag  
+from <Source>.dbo.[Contract] C
+
+where [status] = 'Activated'
+and SBQQ__RenewalForecast__c = 'true'
+and SBQQ__RenewalQuoted__c = 'false'
+and enddate >= getdate()
+
+order by c.AccountId
+---------------------------------------------------------------------------------
+-- ADD sort column to speed bulk load performance If Necessary
+---------------------------------------------------------------------------------
+ALTER TABLE <Staging>.dbo.Contract_UPDATE_RenewalFlag
+ADD [Sort] int IDENTITY (1,1)
+
+
+--select * from <Staging>.dbo.Contract_UPDATE_RenewalFlag 
+---------------------------------------------------------------------------------
+-- Load Subscription Data To Full Sandbox -- 
+---------------------------------------------------------------------------------
+EXEC <Staging>.dbo.SF_TableLoader 'UPDATE','INSERT LINKED SERVER HERE','Contract_UPDATE_RenewalFlag' 
+---------------------------------------------------------------------------------
+--- ERROR REVIEW
+-----------------------------------------------------------------------------------
+Select * 
+from <Staging>.dbo.Contract_UPDATE_RenewalFlag_result
+where error not like '%Success%'
+
+
+--select 
+--* 
+--from  <Source>.dbo.[Contract] c 
+--where SBQQ__RenewalQuoted__c = 'false' 
+--and [status] = 'Activated'
+--and SBQQ__RenewalForecast__c = 'true'
+--and SBQQ__RenewalQuoted__c = 'false'
+--and c.Migrated_Contract_ID__c is not null
