@@ -17,7 +17,9 @@
 ---------------------------------------------------------------------------------
 USE <Source>;
 
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'Attachment'
+EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'ContentVersion'
+
+EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'ContentDocumentLink'
 
 
 
@@ -26,30 +28,36 @@ EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'Attachment'
 ---------------------------------------------------------------------------------
 USE <Staging>;
 
-if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Attachment_Update' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE <Staging>.dbo.Attachment_Update
+if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'ContentDocumentLink_LoadAttachmentsB' AND TABLE_SCHEMA = 'dbo')
+DROP TABLE <Staging>.dbo.ContentDocumentLink_LoadAttachments
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
 ---------------------------------------------------------------------------------
 
-select
-ID,
-ParentID
+Select Distinct
+	CAST('' as nvarchar(18)) as ID,
+	CAST('' as nvarchar(2000)) as error,
+	a.ContentDocumentID as ContentDocumentID,
+	'' as LinkedEntityID,
+	CASE Substring(map.ID, 1, 3) WHEN '02s' THEN 'V'  --- set on EmailMessage object to prevent editing by user
+								 ELSE 'I' END as ShareType,
+	'AllUsers' as Visibility
+	INTO <staging>.dbo.ContentDocumentLink_LoadAttachments
+	From <source>.dbo.ContentVersion a
+	inner join <source>.dbo.ContentDocumentLink CDL
+		on CDL. = A.ID
 
-INTO <Staging>.dbo.Attachment_Update
-FROM <Source>.dbo.Attachment a
-inner join <Staging>.dbo.Order_Insert
-
+where -- Filter so we get the ones that are linked to custom Invoice object
 
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
 ---------------------------------------------------------------------------------
-ALTER TABLE <Staging>.dbo.Attachment_Update
+ALTER TABLE <Staging>.dbo.ContentDocumentLink_LoadAttachments
 ADD [Sort] int IDENTITY (1,1)
 
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 
-EXEC <Staging>.dbo.SF_Tableloader 'Update: bulkapi, batchsize(10)', 'INSERT_LINKED_SERVER_NAME', 'Attachment_Update'
+EXEC <Staging>.dbo.SF_Tableloader 'Update: bulkapi, batchsize(10)', 'INSERT_LINKED_SERVER_NAME', 'ContentDocumentLink_LoadAttachments'
