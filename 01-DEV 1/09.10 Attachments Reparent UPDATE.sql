@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------------
---- Title: Subscription Attachment Update Script	
+--- Title: Attachment Insert Script
 --- Customer: Redwood
 --- Primary Developer: Jim Ziller
 --- Secondary Developers:  
@@ -60,4 +60,4 @@ ADD [Sort] int IDENTITY (1,1)
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 
-EXEC <Staging>.dbo.SF_Tableloader 'Update: bulkapi, batchsize(10)', 'INSERT_LINKED_SERVER_NAME', 'ContentDocumentLink_LoadAttachments'
+EXEC <Staging>.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','INSERT_LINKED_SERVER_NAME','ContentDocumentLink_LoadAttachments'
