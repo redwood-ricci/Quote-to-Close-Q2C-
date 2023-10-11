@@ -1,10 +1,10 @@
 ---------------------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------------
 --- Title: Subscription Load Script	
---- Customer: PowerDMS PlanIt Migration
---- Primary Developer: Gene Mitskevitch
+--- Customer: Redwood
+--- Primary Developer: Jim Ziller
 --- Secondary Developers:  
---- Created Date: 1 June 2022
+--- Created Date: 10/11/2023
 --- Last Updated: 
 --- Change Log: 
 --- Prerequisites:

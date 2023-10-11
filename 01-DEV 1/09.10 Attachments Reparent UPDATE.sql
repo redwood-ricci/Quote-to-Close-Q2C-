@@ -1,10 +1,10 @@
 ---------------------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------------
 --- Title: Subscription Attachment Update Script	
---- Customer: PowerDMS PlanIt Migration
---- Primary Developer: Patrick Bowen
+--- Customer: Redwood
+--- Primary Developer: Jim Ziller
 --- Secondary Developers:  
---- Created Date: 21 June 2022
+--- Created Date: 10/11/2023
 --- Last Updated: 
 --- Change Log: 
 --- Prerequisites:
