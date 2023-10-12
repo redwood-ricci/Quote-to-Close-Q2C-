@@ -1,10 +1,10 @@
 ---------------------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------------
---- Title: Subscription Attachment Update Script	
---- Customer: PowerDMS PlanIt Migration
---- Primary Developer: Patrick Bowen
+--- Title: Attachment Insert Script
+--- Customer: Redwood
+--- Primary Developer: Jim Ziller
 --- Secondary Developers:  
---- Created Date: 21 June 2022
+--- Created Date: 10/11/2023
 --- Last Updated: 
 --- Change Log: 
 --- Prerequisites:
@@ -17,7 +17,9 @@
 ---------------------------------------------------------------------------------
 USE SourceQA;
 
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Attachment'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'ContentVersion'
+
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'ContentDocumentLink'
 
 
 
@@ -26,30 +28,36 @@ EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Attachment'
 ---------------------------------------------------------------------------------
 USE StageQA;
 
-if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Attachment_Update' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.Attachment_Update
+if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'ContentDocumentLink_LoadAttachmentsB' AND TABLE_SCHEMA = 'dbo')
+DROP TABLE StageQA.dbo.ContentDocumentLink_LoadAttachments
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
 ---------------------------------------------------------------------------------
 
-select
-ID,
-ParentID
+Select Distinct
+	CAST('' as nvarchar(18)) as ID,
+	CAST('' as nvarchar(2000)) as error,
+	a.ContentDocumentID as ContentDocumentID,
+	'' as LinkedEntityID,
+	CASE Substring(map.ID, 1, 3) WHEN '02s' THEN 'V'  --- set on EmailMessage object to prevent editing by user
+								 ELSE 'I' END as ShareType,
+	'AllUsers' as Visibility
+	INTO StageQA.dbo.ContentDocumentLink_LoadAttachments
+	From SourceQA.dbo.ContentVersion a
+	inner join SourceQA.dbo.ContentDocumentLink CDL
+		on CDL. = A.ID
 
-INTO StageQA.dbo.Attachment_Update
-FROM SourceQA.dbo.Attachment a
-inner join StageQA.dbo.Order_Insert
-
+where -- Filter so we get the ones that are linked to custom Invoice object
 
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
 ---------------------------------------------------------------------------------
-ALTER TABLE StageQA.dbo.Attachment_Update
+ALTER TABLE StageQA.dbo.ContentDocumentLink_LoadAttachments
 ADD [Sort] int IDENTITY (1,1)
 
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 
-EXEC StageQA.dbo.SF_Tableloader 'Update: bulkapi, batchsize(10)', 'SANDBOX_QA', 'Attachment_Update'
+EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','SANDBOX_QA','ContentDocumentLink_LoadAttachments'
