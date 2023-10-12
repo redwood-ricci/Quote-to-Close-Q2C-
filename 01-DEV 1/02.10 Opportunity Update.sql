@@ -27,10 +27,10 @@ EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Opportunity'
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE <staging>;
+USE StageQA;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Opportunity_Update' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE <Staging>.dbo.[Opportunity_Update]
+DROP TABLE StageQA.dbo.[Opportunity_Update]
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
@@ -44,7 +44,7 @@ Select
 -- MIGRATION FIELDS 																						
 	A.ID + '-NEO' as Opp_Migration_id__c
 
-INTO <Staging>.dbo.Opportunity_Update
+INTO StageQA.dbo.Opportunity_Update
 
 FROM SourceQA.dbo.Opportunity O
 LEFT OUTER JOIN SourceQA.dbo.Account Acct 
@@ -59,12 +59,12 @@ ORDER BY Acct.ID
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
 ---------------------------------------------------------------------------------
-ALTER TABLE <staging>.dbo.[Opportunity_Update]
+ALTER TABLE StageQA.dbo.[Opportunity_Update]
 ADD [Sort] int 
 GO
 WITH NumberedRows AS (
   SELECT *, ROW_NUMBER() OVER (ORDER BY REF_AccountID) AS OrderRowNumber
-  FROM <staging>.dbo.[Opportunity_Update]
+  FROM StageQA.dbo.[Opportunity_Update]
 )
 UPDATE NumberedRows
 SET [Sort] = OrderRowNumber;
@@ -77,7 +77,7 @@ SET [Sort] = OrderRowNumber;
 -- Double check there are no duplicate rows
 
 select Opp_Migration_id__c, count(*)
-from <staging>.dbo.[Opportunity_Update]
+from StageQA.dbo.[Opportunity_Update]
 group by Opp_Migration_id__c
 having count(*) > 1
 
@@ -86,8 +86,8 @@ having count(*) > 1
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
-USE <Staging>;
-EXEC <Staging>.dboSF_Tableloader 'UPDATE:Bulkapi,batchsize(10)','SANDBOX_QA','Opportunity_Update'
+USE StageQA;
+EXEC StageQA.dboSF_Tableloader 'UPDATE:Bulkapi,batchsize(10)','SANDBOX_QA','Opportunity_Update'
 
 ---------------------------------------------------------------------------------
 -- Error Review	

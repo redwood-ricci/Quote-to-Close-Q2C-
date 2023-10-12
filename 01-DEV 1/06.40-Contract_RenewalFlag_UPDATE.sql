@@ -28,10 +28,10 @@ EXEC SourceQA.dbo.SF_Replicate 'INSERT LINKED SERVER HERE' ,'Contract', 'PkChunk
 ---------------------------------------------------------------------------------
 --- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE <Staging>;
+USE StageQA;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Contract_UPDATE_RenewalFlag' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE <Staging>.dbo.Contract_UPDATE_RenewalFlag;
+DROP TABLE StageQA.dbo.Contract_UPDATE_RenewalFlag;
 
 
 select 
@@ -39,7 +39,7 @@ select
 	Cast('' as nvarchar(2000)) as Error,
 	C.Migrated_ID__c,
 	'true' as SBQQ__RenewalQuoted__c
-into <Staging>.dbo.Contract_UPDATE_RenewalFlag  
+into StageQA.dbo.Contract_UPDATE_RenewalFlag  
 from SourceQA.dbo.[Contract] C
 
 where [status] = 'Activated'
@@ -51,20 +51,20 @@ order by c.AccountId
 ---------------------------------------------------------------------------------
 -- ADD sort column to speed bulk load performance If Necessary
 ---------------------------------------------------------------------------------
-ALTER TABLE <Staging>.dbo.Contract_UPDATE_RenewalFlag
+ALTER TABLE StageQA.dbo.Contract_UPDATE_RenewalFlag
 ADD [Sort] int IDENTITY (1,1)
 
 
---select * from <Staging>.dbo.Contract_UPDATE_RenewalFlag 
+--select * from StageQA.dbo.Contract_UPDATE_RenewalFlag 
 ---------------------------------------------------------------------------------
 -- Load Subscription Data To Full Sandbox -- 
 ---------------------------------------------------------------------------------
-EXEC <Staging>.dbo.SF_TableLoader 'UPDATE','INSERT LINKED SERVER HERE','Contract_UPDATE_RenewalFlag' 
+EXEC StageQA.dbo.SF_TableLoader 'UPDATE','INSERT LINKED SERVER HERE','Contract_UPDATE_RenewalFlag' 
 ---------------------------------------------------------------------------------
 --- ERROR REVIEW
 -----------------------------------------------------------------------------------
 Select * 
-from <Staging>.dbo.Contract_UPDATE_RenewalFlag_result
+from StageQA.dbo.Contract_UPDATE_RenewalFlag_result
 where error not like '%Success%'
 
 

@@ -26,10 +26,10 @@ EXEC [SourceQA].dbo.SF_Replicate 'INSERT LINKED SERVER HERE', 'Contract', 'PkChu
 ---------------------------------------------------------------------------------
 --- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE <Staging>;
+USE StageQA;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Contract_Activate_Update' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE <Staging>.dbo.Contract_Activate_Update;
+DROP TABLE StageQA.dbo.Contract_Activate_Update;
 
 
 SELECT 
@@ -40,10 +40,10 @@ SELECT
 		WHEN C.EndDate < GETDATE() THEN 'Terminated'
 		ELSE 'Activated'
 	END as [Status]
-into <Staging>.dbo.Contract_Activate_Update
+into StageQA.dbo.Contract_Activate_Update
 FROM SourceQA.dbo.[Contract] C
 --Limit the records to ones migrated
-INNER JOIN <Staging>.dbo.Contract_LoadFULL_Result z
+INNER JOIN StageQA.dbo.Contract_LoadFULL_Result z
 	ON C.Migrated_ID__c = z.Migrated_ID__c
 WHERE C.Migrated_ID__c is not null
 AND [Status] NOT IN ('Activated', 'Terminated') -- This can allow the process to run only the ones that haven't been activated 
@@ -53,23 +53,23 @@ ORDER BY c.AccountId
 ---------------------------------------------------------------------------------
 -- ADD sort column to speed bulk load performance If Necessary
 ---------------------------------------------------------------------------------
-ALTER TABLE <Staging>.dbo.Contract_Activate_Update
+ALTER TABLE StageQA.dbo.Contract_Activate_Update
 ADD [Sort] int IDENTITY (1,1)
 
 
---select * from <Staging>.dbo.Contract_Activate_Update
+--select * from StageQA.dbo.Contract_Activate_Update
 ---------------------------------------------------------------------------------
 -- Load Subscription Data To Full Sandbox -- 
 ---------------------------------------------------------------------------------
-EXEC [<Staging>].dbo.SF_TableLoader 'UPDATE','INSERT LINKED SERVER HERE','Contract_Activate_Update'
+EXEC [StageQA].dbo.SF_TableLoader 'UPDATE','INSERT LINKED SERVER HERE','Contract_Activate_Update'
 
-EXEC [<Staging>].dbo.SF_TableLoader 'UPDATE','INSERT LINKED SERVER HERE','OrderItem_Activate_UPDATE' 
+EXEC [StageQA].dbo.SF_TableLoader 'UPDATE','INSERT LINKED SERVER HERE','OrderItem_Activate_UPDATE' 
 
 ---------------------------------------------------------------------------------
 --- ERROR REVIEW
 ---------------------------------------------------------------------------------
 Select * 
-from [<Staging>].dbo.Contract_Activate_Update_result
+from [StageQA].dbo.Contract_Activate_Update_result
 where error not like '%Success%'
 
 

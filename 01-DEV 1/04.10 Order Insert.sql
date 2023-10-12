@@ -28,10 +28,10 @@ EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Order', 'yes'
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE <Staging>;
+USE StageQA;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Order_Load' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE <Staging>.dbo.[Order_Load]
+DROP TABLE StageQA.dbo.[Order_Load]
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
@@ -218,12 +218,12 @@ inner join  SourceQA.dbo.Invoice__c Inv
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
 ---------------------------------------------------------------------------------
-ALTER TABLE <Staging>.dbo.[Order_Load]
+ALTER TABLE StageQA.dbo.[Order_Load]
 ADD [Sort] int 
 GO
 WITH NumberedRows AS (
   SELECT *, ROW_NUMBER() OVER (ORDER BY AccountID) AS OrderRowNumber
-  FROM <staging>.dbo.[Order_Load]
+  FROM StageQA.dbo.[Order_Load]
 )
 UPDATE NumberedRows
 SET [Sort] = OrderRowNumber;
@@ -239,7 +239,7 @@ SET [Sort] = OrderRowNumber;
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 
-EXEC <Staging>.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','SANDBOX_QA','Order_Load'
+EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','SANDBOX_QA','Order_Load'
 
 ---------------------------------------------------------------------------------
 -- Error Review	

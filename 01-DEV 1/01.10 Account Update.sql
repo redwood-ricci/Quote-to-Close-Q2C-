@@ -25,15 +25,15 @@ EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'RecordType'
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE <staging>;
+USE StageQA;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Account_Load' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE <staging>.dbo.[Account_Load]
+DROP TABLE StageQA.dbo.[Account_Load]
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
 ---------------------------------------------------------------------------------
-USE <staging>;
+USE StageQA;
 
 Select
 	A.ID as Id,
@@ -43,7 +43,7 @@ Select
 -- MIGRATION FIELDS 																						
 	A.ID + '-NEO' as Migration_id__c
 
-INTO <staging>.dbo.Account_Update
+INTO StageQA.dbo.Account_Update
 FROM SourceQA.dbo.Account a
 
 
@@ -52,7 +52,7 @@ WHERE -- Surgical Filters to make sure each update doesn't go beyond the scope o
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
 ---------------------------------------------------------------------------------
-ALTER TABLE <staging>.dbo.[Account_Load]
+ALTER TABLE StageQA.dbo.[Account_Load]
 ADD [Sort] int IDENTITY (1,1)
 
 
@@ -66,10 +66,10 @@ ADD [Sort] int IDENTITY (1,1)
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 
-EXEC <staging>.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','SANDBOX_QA','Account_Load'
+EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','SANDBOX_QA','Account_Load'
 
 ---------------------------------------------------------------------------------
 -- Error Review	
 ---------------------------------------------------------------------------------
 
--- Select error, * from <staging>.dbo.Account_Load_Result a where error not like '%success%'
+-- Select error, * from StageQA.dbo.Account_Load_Result a where error not like '%success%'

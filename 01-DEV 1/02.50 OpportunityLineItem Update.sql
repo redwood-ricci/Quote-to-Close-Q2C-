@@ -27,10 +27,10 @@ EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'OpportunityLineItem'
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE <Staging>;
+USE StageQA;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'OpportunityLineItem_Update' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE <Staging>.dbo.[OpportunityLineItem_Update]
+DROP TABLE StageQA.dbo.[OpportunityLineItem_Update]
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
@@ -45,7 +45,7 @@ SELECT
 -- MIGRATION FIELDS 																						
 	A.ID + '-NEO' as OLI_Migration_id__c
 
-INTO <Staging>.[dbo].OpportunityLineItem_Update
+INTO StageQA.[dbo].OpportunityLineItem_Update
 
 FROM SourceQA.[dbo].[OpportunityLineItem] OLI
 INNER JOIN SourceQA.[dbo].Opportunity O
@@ -68,12 +68,12 @@ WHERE --
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
 ---------------------------------------------------------------------------------
-ALTER TABLE <Staging>.[dbo].[OpportunityLineItem_Update]
+ALTER TABLE StageQA.[dbo].[OpportunityLineItem_Update]
 ADD [Sort] int 
 GO
 WITH NumberedRows AS (
   SELECT *, ROW_NUMBER() OVER (ORDER BY REF_OpportunityID) AS OrderRowNumber
-  FROM <staging>.dbo.[OpportunityLineItem_Update]
+  FROM StageQA.dbo.[OpportunityLineItem_Update]
 )
 UPDATE NumberedRows
 SET [Sort] = OrderRowNumber;
@@ -84,7 +84,7 @@ SET [Sort] = OrderRowNumber;
 -- Validations
 ---------------------------------------------------------------------------------
 select OLI_Migration_id__c, count(*)
-from <staging>.dbo.[OpportunityLineItem_Update]
+from StageQA.dbo.[OpportunityLineItem_Update]
 group by OLI_Migration_id__c
 having count(*) > 1
 
@@ -92,8 +92,8 @@ having count(*) > 1
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
-USE <Staging>;
-EXEC <Staging>.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','SANDBOX_QA','OpportunityLineItem_Update'
+USE StageQA;
+EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','SANDBOX_QA','OpportunityLineItem_Update'
 
 ---------------------------------------------------------------------------------
 -- Error Review	

@@ -25,7 +25,7 @@ EXEC [SourceQA].dbo.SF_Replicate 'INSERT LINKED SERVER HERE', 'OrderItem', 'PkCh
 ---------------------------------------------------------------------------------
 --- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE [<Staging>];
+USE [StageQA];
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'OrderItem_Activate_UPDATE' AND TABLE_SCHEMA = 'dbo')
 DROP TABLE OrderItem_Activate_UPDATE;
@@ -39,7 +39,7 @@ select OI.ID
 	,OI.OrderID as REF_OrderID
 	,OI.Migrated_id__c as REF_MigratedID
 	,O.[Status] as REF_OrderStatus
-into [<Staging>].dbo.OrderItem_Activate_UPDATE
+into [StageQA].dbo.OrderItem_Activate_UPDATE
 from [SourceQA].dbo.[OrderItem] OI
 Left Join [SourceQA].dbo.[Order] O
 	on OI.OrderId  =  O.Id
@@ -50,12 +50,12 @@ and OI.SBQQ__Status__c = 'Draft'
 ---------------------------------------------------------------------------------
 -- ADD sort column to speed bulk load performance If Necessary
 ---------------------------------------------------------------------------------
-ALTER TABLE [<Staging>].dbo.OrderItem_Activate_UPDATE
+ALTER TABLE [StageQA].dbo.OrderItem_Activate_UPDATE
 ADD [Sort] int 
 GO
 WITH NumberedRows AS (
   SELECT *, ROW_NUMBER() OVER (ORDER BY REF_OrderID) AS OrderRowNumber
-  FROM [<Staging>].dbo.OrderItem_Activate_UPDATE
+  FROM [StageQA].dbo.OrderItem_Activate_UPDATE
 )
 UPDATE NumberedRows
 SET [Sort] = OrderRowNumber;
@@ -63,14 +63,14 @@ SET [Sort] = OrderRowNumber;
 ---------------------------------------------------------------------------------
 -- Load Subscription Data To Full Sandbox -- 
 ---------------------------------------------------------------------------------
-EXEC [<Staging>].dbo.SF_TableLoader 'UPDATE','INSERT LINKED SERVER HERE','OrderItem_Activate_UPDATE' 
+EXEC [StageQA].dbo.SF_TableLoader 'UPDATE','INSERT LINKED SERVER HERE','OrderItem_Activate_UPDATE' 
 
 
 ---------------------------------------------------------------------------------
 --- ERROR REVIEW
 -----------------------------------------------------------------------------------
 Select * 
-from [<Staging>].dbo.OrderItem_Activate_UPDATE_Result
+from [StageQA].dbo.OrderItem_Activate_UPDATE_Result
 where error not like '%Success%'
 
 

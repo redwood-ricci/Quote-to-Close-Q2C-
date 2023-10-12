@@ -29,11 +29,11 @@ EXEC SourceQA.dbo.SF_Replicate 'INSERT LINKED SERVER HERE' ,'Order', 'PkChunk'
 ---------------------------------------------------------------------------------
 --- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE [<Staging>]
+USE [StageQA]
 GO
 
 IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Order_UPDATE]') AND type in (N'U'))
-DROP TABLE [<Staging>].[dbo].[Order_UPDATE]
+DROP TABLE [StageQA].[dbo].[Order_UPDATE]
 GO
 
 ---------------------------------------------------------------------------------
@@ -45,7 +45,7 @@ SELECT
 	'True' as Force_Sync__c,
 	'Activated' as [Status]
 
-into <Staging>.dbo.Order_UPDATE
+into StageQA.dbo.Order_UPDATE
 FROM  SourceQA.dbo.[Order]
 WHERE Migrated_Id__c IS NOT NULL AND 
 Migrated_Id__c LIKE '%-Migration'-- AND 
@@ -57,21 +57,21 @@ Migrated_Id__c LIKE '%-Migration'-- AND
 ---------------------------------------------------------------------------------
 -- ADD sort column to speed bulk load performance If Necessary
 ---------------------------------------------------------------------------------
-ALTER TABLE <Staging>.dbo.Order_UPDATE
+ALTER TABLE StageQA.dbo.Order_UPDATE
 ADD [Sort] int IDENTITY (1,1)
 
 
-select * from <Staging>.dbo.Order_UPDATE
+select * from StageQA.dbo.Order_UPDATE
 ---------------------------------------------------------------------------------
 -- Load Subscription Data To Full Sandbox -- 
 ---------------------------------------------------------------------------------
-EXEC <Staging>.dbo.SF_TableLoader 'UPDATE','INSERT LINKED SERVER HERE','Order_UPDATE'
+EXEC StageQA.dbo.SF_TableLoader 'UPDATE','INSERT LINKED SERVER HERE','Order_UPDATE'
 ---------------------------------------------------------------------------------
 --- ERROR REVIEW
 ---------------------------------------------------------------------------------
-Select * from <Staging>.dbo.Order_UPDATE_Result where error not like '%Success%'
+Select * from StageQA.dbo.Order_UPDATE_Result where error not like '%Success%'
 --error, count(*)
-from <Staging>.dbo.Order_UPDATE_Result
+from StageQA.dbo.Order_UPDATE_Result
 where error not like '%Success%'
 group by error
 

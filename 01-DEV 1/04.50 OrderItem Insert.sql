@@ -31,10 +31,10 @@ EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'OrderItem'
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE <staging>;
+USE StageQA;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'OrderItem_Load' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE <staging>.dbo.OrderItem_Load
+DROP TABLE StageQA.dbo.OrderItem_Load
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
@@ -116,7 +116,7 @@ CASE WHEN a.[Tier (Quantity)] = '0' THEN a.ARR
 
 
 
-INTO <staging>.dbo.OrderItem_Load
+INTO StageQA.dbo.OrderItem_Load
 
 FROM  SourceQA.dbo.SBQQ__QuoteLine__c QLE
 LEFT JOIN SourceQA.dbo.SBQQ__Subscription__c SUB on SUB.SBQQ__QuoteLine__c = QLE.ID
@@ -135,8 +135,8 @@ ADD [Sort] int IDENTITY (1,1)
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
-USE <staging>;
-EXEC <staging>.dbo.SF_Tableloader 'INSERT:bulkapi, batchsize(5)', 'SANDBOX_QA', 'OrderItem_Load'
+USE StageQA;
+EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi, batchsize(5)', 'SANDBOX_QA', 'OrderItem_Load'
 
 
 ---------------------------------------------------------------------------------
