@@ -15,14 +15,14 @@
 ---------------------------------------------------------------------------------
 -- Replicate Data
 ---------------------------------------------------------------------------------
-USE <Source>;
+USE SourceQA;
 
-EXEC <source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'Account', 'yes'
-EXEC <source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'PriceBook2', 'yes'
-EXEC <source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'sbqq__Quote__c', 'yes'
-EXEC <source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'Opportunity', 'yes'
-EXEC <source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'Contract', 'yes'
-EXEC <source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'Order', 'yes'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Account', 'yes'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'PriceBook2', 'yes'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'sbqq__Quote__c', 'yes'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Opportunity', 'yes'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Contract', 'yes'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Order', 'yes'
 
 
 ---------------------------------------------------------------------------------
@@ -208,10 +208,10 @@ Select
 -- MIGRATION FIELDS 																						
 	Con.ID as Migration_id__c
 
-FROM <Source>.dbo.SBQQ__Quote__c Qte
-inner join <Source>.dbo.[Contract] Con
+FROM SourceQA.dbo.SBQQ__Quote__c Qte
+inner join SourceQA.dbo.[Contract] Con
 	on Qte.ID = Con.SBQQ__Quote__c
-inner join  <Source>.dbo.Invoice__c Inv
+inner join  SourceQA.dbo.Invoice__c Inv
 	on Inv.Related_Contract__c = Con.ID
 	and Inv.Related_Opportunity__c =Con.SBQQ__Opportunity2__c
 
@@ -239,7 +239,7 @@ SET [Sort] = OrderRowNumber;
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 
-EXEC <Staging>.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','INSERT_LINKED_SERVER_NAME','Order_Load'
+EXEC <Staging>.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','SANDBOX_QA','Order_Load'
 
 ---------------------------------------------------------------------------------
 -- Error Review	

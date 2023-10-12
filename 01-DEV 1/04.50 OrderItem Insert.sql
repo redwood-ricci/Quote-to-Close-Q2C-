@@ -15,18 +15,18 @@
 ---------------------------------------------------------------------------------
 -- Replicate Data
 ---------------------------------------------------------------------------------
-USE <Source>;
+USE SourceQA;
 
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'Order'
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'Product2'
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'PriceBook2'
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'PriceBookEntry'
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'Opportunity'
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'OpportunityLineItem'
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'SBQQ__QuoteLine__c'
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'SBQQ__Subscription__c'
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'Contract' 
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'OrderItem'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Order'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Product2'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'PriceBook2'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'PriceBookEntry'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Opportunity'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'OpportunityLineItem'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'SBQQ__QuoteLine__c'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'SBQQ__Subscription__c'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Contract' 
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'OrderItem'
 
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
@@ -118,10 +118,10 @@ CASE WHEN a.[Tier (Quantity)] = '0' THEN a.ARR
 
 INTO <staging>.dbo.OrderItem_Load
 
-FROM  <Source>.dbo.SBQQ__QuoteLine__c QLE
-LEFT JOIN <Source>.dbo.SBQQ__Subscription__c SUB on SUB.SBQQ__QuoteLine__c = QLE.ID
-LEFT JOIN <Source>.dbo.[Contract] Cnt on SUB.SBQQ__Contract__c = Cnt.ID
-LEFT JOIN <Source>.dbo.[Order]  Ord = Cnt.OrderID = Ord.ID
+FROM  SourceQA.dbo.SBQQ__QuoteLine__c QLE
+LEFT JOIN SourceQA.dbo.SBQQ__Subscription__c SUB on SUB.SBQQ__QuoteLine__c = QLE.ID
+LEFT JOIN SourceQA.dbo.[Contract] Cnt on SUB.SBQQ__Contract__c = Cnt.ID
+LEFT JOIN SourceQA.dbo.[Order]  Ord = Cnt.OrderID = Ord.ID
 
 WHERE
 
@@ -136,7 +136,7 @@ ADD [Sort] int IDENTITY (1,1)
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 USE <staging>;
-EXEC <staging>.dbo.SF_Tableloader 'INSERT:bulkapi, batchsize(5)', 'INSERT_LINKED_SERVER_NAME', 'OrderItem_Load'
+EXEC <staging>.dbo.SF_Tableloader 'INSERT:bulkapi, batchsize(5)', 'SANDBOX_QA', 'OrderItem_Load'
 
 
 ---------------------------------------------------------------------------------
@@ -146,4 +146,4 @@ EXEC <staging>.dbo.SF_Tableloader 'INSERT:bulkapi, batchsize(5)', 'INSERT_LINKED
 -- USE Insert_Database_Name_Here; Select error, * from OrderItem_Load_Result a where error not like '%success%'
 
 
--- USE Insert_Database_Name_Here; EXEC SF_Tableloader 'HardDelete:batchsize(10)', 'INSERT_LINKED_SERVER_NAME', 'SBQQ__QuoteLine__c_Load_Result'
+-- USE Insert_Database_Name_Here; EXEC SF_Tableloader 'HardDelete:batchsize(10)', 'SANDBOX_QA', 'SBQQ__QuoteLine__c_Load_Result'

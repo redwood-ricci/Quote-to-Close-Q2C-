@@ -17,12 +17,12 @@
 ---------------------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------------
 
-USE <Source>;
+USE SourceQA;
 
 ---------------------------------------------------------------------------------
 --- COPY DATA FROM SALESFORCE
 ---------------------------------------------------------------------------------
-EXEC [<Source>].dbo.SF_Replicate 'INSERT LINKED SERVER HERE', 'Contract', 'PkChunk'
+EXEC [SourceQA].dbo.SF_Replicate 'INSERT LINKED SERVER HERE', 'Contract', 'PkChunk'
 ---------------------------------------------------------------------------------
 --- Drop Staging Table
 ---------------------------------------------------------------------------------
@@ -41,7 +41,7 @@ SELECT
 		ELSE 'Activated'
 	END as [Status]
 into <Staging>.dbo.Contract_Activate_Update
-FROM <Source>.dbo.[Contract] C
+FROM SourceQA.dbo.[Contract] C
 --Limit the records to ones migrated
 INNER JOIN <Staging>.dbo.Contract_LoadFULL_Result z
 	ON C.Migrated_ID__c = z.Migrated_ID__c
@@ -73,4 +73,4 @@ from [<Staging>].dbo.Contract_Activate_Update_result
 where error not like '%Success%'
 
 
-select * from  <Source>.dbo.[Contract] c where status = 'Expired' and C.Migrated_ID__c is not null
+select * from  SourceQA.dbo.[Contract] c where status = 'Expired' and C.Migrated_ID__c is not null

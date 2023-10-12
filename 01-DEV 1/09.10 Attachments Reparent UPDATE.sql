@@ -1,10 +1,10 @@
 ---------------------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------------
---- Title: Attachment Insert Script
---- Customer: Redwood
---- Primary Developer: Jim Ziller
+--- Title: Subscription Attachment Update Script	
+--- Customer: PowerDMS PlanIt Migration
+--- Primary Developer: Patrick Bowen
 --- Secondary Developers:  
---- Created Date: 10/11/2023
+--- Created Date: 21 June 2022
 --- Last Updated: 
 --- Change Log: 
 --- Prerequisites:
@@ -15,11 +15,9 @@
 ---------------------------------------------------------------------------------
 -- Replicate Data
 ---------------------------------------------------------------------------------
-USE <Source>;
+USE SourceQA;
 
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'ContentVersion'
-
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'ContentDocumentLink'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Attachment'
 
 
 
@@ -28,36 +26,30 @@ EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'ContentDocumentLink
 ---------------------------------------------------------------------------------
 USE <Staging>;
 
-if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'ContentDocumentLink_LoadAttachmentsB' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE <Staging>.dbo.ContentDocumentLink_LoadAttachments
+if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Attachment_Update' AND TABLE_SCHEMA = 'dbo')
+DROP TABLE <Staging>.dbo.Attachment_Update
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
 ---------------------------------------------------------------------------------
 
-Select Distinct
-	CAST('' as nvarchar(18)) as ID,
-	CAST('' as nvarchar(2000)) as error,
-	a.ContentDocumentID as ContentDocumentID,
-	'' as LinkedEntityID,
-	CASE Substring(map.ID, 1, 3) WHEN '02s' THEN 'V'  --- set on EmailMessage object to prevent editing by user
-								 ELSE 'I' END as ShareType,
-	'AllUsers' as Visibility
-	INTO <staging>.dbo.ContentDocumentLink_LoadAttachments
-	From <source>.dbo.ContentVersion a
-	inner join <source>.dbo.ContentDocumentLink CDL
-		on CDL. = A.ID
+select
+ID,
+ParentID
 
-where -- Filter so we get the ones that are linked to custom Invoice object
+INTO <Staging>.dbo.Attachment_Update
+FROM SourceQA.dbo.Attachment a
+inner join <Staging>.dbo.Order_Insert
+
 
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
 ---------------------------------------------------------------------------------
-ALTER TABLE <Staging>.dbo.ContentDocumentLink_LoadAttachments
+ALTER TABLE <Staging>.dbo.Attachment_Update
 ADD [Sort] int IDENTITY (1,1)
 
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 
-EXEC <Staging>.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','INSERT_LINKED_SERVER_NAME','ContentDocumentLink_LoadAttachments'
+EXEC <Staging>.dbo.SF_Tableloader 'Update: bulkapi, batchsize(10)', 'SANDBOX_QA', 'Attachment_Update'

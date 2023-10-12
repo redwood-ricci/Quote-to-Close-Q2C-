@@ -15,13 +15,13 @@
 ---------------------------------------------------------------------------------
 -- Replicate Data
 ---------------------------------------------------------------------------------
-USE <source>;
+USE SourceQA;
 
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'Product2'
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'PriceBook2'
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'PriceBookEntry'
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'Opportunity'
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'OpportunityLineItem'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Product2'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'PriceBook2'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'PriceBookEntry'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Opportunity'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'OpportunityLineItem'
 
 
 ---------------------------------------------------------------------------------
@@ -47,17 +47,17 @@ SELECT
 
 INTO <Staging>.[dbo].OpportunityLineItem_Update
 
-FROM <Source>.[dbo].[OpportunityLineItem] OLI
-INNER JOIN <Source>.[dbo].Opportunity O
+FROM SourceQA.[dbo].[OpportunityLineItem] OLI
+INNER JOIN SourceQA.[dbo].Opportunity O
 	on O.ID = OLI.OpportunityID
 
-INNER JOIN  <Source>.[dbo].Product2 PROD 
+INNER JOIN  SourceQA.[dbo].Product2 PROD 
 	ON OLI.Product2ID = PROD.ID
 
-INNER JOIN  <Source>.[dbo].Pricebook2 PB 
+INNER JOIN  SourceQA.[dbo].Pricebook2 PB 
 	ON OLI.Pricebook2ID = PB.ID
 
-LEFT OUTER JOIN  <Source>.[dbo].PriceBookEntry PBE 
+LEFT OUTER JOIN  SourceQA.[dbo].PriceBookEntry PBE 
 	ON PROD.ID = PBE.Product2id 
 	AND PBE.Pricebook2Id = PB.ID
 
@@ -93,7 +93,7 @@ having count(*) > 1
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 USE <Staging>;
-EXEC <Staging>.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','INSERT_LINKED_SERVER_NAME','OpportunityLineItem_Update'
+EXEC <Staging>.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','SANDBOX_QA','OpportunityLineItem_Update'
 
 ---------------------------------------------------------------------------------
 -- Error Review	

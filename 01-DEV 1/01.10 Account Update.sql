@@ -16,11 +16,11 @@
 ---------------------------------------------------------------------------------
 -- Replicate Data
 ---------------------------------------------------------------------------------
-USE <Source>;
+USE SourceQA;
 
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'Account'
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'User'
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'RecordType'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Account'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'User'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'RecordType'
 
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
@@ -44,7 +44,7 @@ Select
 	A.ID + '-NEO' as Migration_id__c
 
 INTO <staging>.dbo.Account_Update
-FROM <Source>.dbo.Account a
+FROM SourceQA.dbo.Account a
 
 
 WHERE -- Surgical Filters to make sure each update doesn't go beyond the scope of the update
@@ -66,7 +66,7 @@ ADD [Sort] int IDENTITY (1,1)
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 
-EXEC <staging>.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','INSERT_LINKED_SERVER_NAME','Account_Load'
+EXEC <staging>.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','SANDBOX_QA','Account_Load'
 
 ---------------------------------------------------------------------------------
 -- Error Review	

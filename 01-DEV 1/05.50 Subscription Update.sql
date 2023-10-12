@@ -17,12 +17,12 @@
 ---------------------------------------------------------------------------------
 USE Insert_Database_Name_Here;
 
-EXEC SF_Refresh 'INSERT_LINKED_SERVER_NAME', 'Product2', 'yes'
-EXEC SF_Refresh 'INSERT_LINKED_SERVER_NAME', 'PriceBook2', 'yes'
-EXEC SF_Refresh 'INSERT_LINKED_SERVER_NAME', 'PriceBookEntry', 'yes'
-EXEC SF_Refresh 'INSERT_LINKED_SERVER_NAME', 'SBQQ__QuoteLine__c', 'yes'
-EXEC SF_Refresh 'INSERT_LINKED_SERVER_NAME', 'Contract', 'yes'
-EXEC SF_Refresh 'INSERT_LINKED_SERVER_NAME', 'SBQQ__Subscription__c', 'yes'
+EXEC SF_Refresh 'SANDBOX_QA', 'Product2', 'yes'
+EXEC SF_Refresh 'SANDBOX_QA', 'PriceBook2', 'yes'
+EXEC SF_Refresh 'SANDBOX_QA', 'PriceBookEntry', 'yes'
+EXEC SF_Refresh 'SANDBOX_QA', 'SBQQ__QuoteLine__c', 'yes'
+EXEC SF_Refresh 'SANDBOX_QA', 'Contract', 'yes'
+EXEC SF_Refresh 'SANDBOX_QA', 'SBQQ__Subscription__c', 'yes'
 
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
@@ -119,7 +119,7 @@ ADD [Sort] int IDENTITY (1,1)
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 USE Insert_Database_Name_Here;
-EXEC SF_Tableloader 'Upsert:bulkapi, batchsize(10)', 'INSERT_LINKED_SERVER_NAME', 'SBQQ__Subscription__c_Load', 'Migration_Id2__c'
+EXEC SF_Tableloader 'Upsert:bulkapi, batchsize(10)', 'SANDBOX_QA', 'SBQQ__Subscription__c_Load', 'Migration_Id2__c'
 
 
 ---------------------------------------------------------------------------------
@@ -129,6 +129,6 @@ EXEC SF_Tableloader 'Upsert:bulkapi, batchsize(10)', 'INSERT_LINKED_SERVER_NAME'
 -- USE Insert_Database_Name_Here; Select error, * from SBQQ__Subscription__c_Load_Result a where error not like '%success%'
 
 
--- USE Insert_Database_Name_Here; EXEC SF_Tableloader 'HardDelete:batchsize(10)', 'INSERT_LINKED_SERVER_NAME', 'SBQQ__QuoteLine__c_Load_Result'
+-- USE Insert_Database_Name_Here; EXEC SF_Tableloader 'HardDelete:batchsize(10)', 'SANDBOX_QA', 'SBQQ__QuoteLine__c_Load_Result'
 
--- USE Insert_Database_Name_Here; EXEC SF_Tableloader 'Delete:batchsize(10)', 'INSERT_LINKED_SERVER_NAME', 'SBQQ__QuoteLine__c_Load2_Result'
+-- USE Insert_Database_Name_Here; EXEC SF_Tableloader 'Delete:batchsize(10)', 'SANDBOX_QA', 'SBQQ__QuoteLine__c_Load2_Result'

@@ -18,13 +18,13 @@
 ---------------------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------------
 
-USE <Source>;
+USE SourceQA;
 
 ---------------------------------------------------------------------------------
 --- COPY DATA FROM SALESFORCE
 ---------------------------------------------------------------------------------
 
-EXEC <Source>.dbo.SF_Replicate 'INSERT LINKED SERVER HERE' ,'Order', 'PkChunk'
+EXEC SourceQA.dbo.SF_Replicate 'INSERT LINKED SERVER HERE' ,'Order', 'PkChunk'
 
 ---------------------------------------------------------------------------------
 --- Drop Staging Table
@@ -46,7 +46,7 @@ SELECT
 	'Activated' as [Status]
 
 into <Staging>.dbo.Order_UPDATE
-FROM  <Source>.dbo.[Order]
+FROM  SourceQA.dbo.[Order]
 WHERE Migrated_Id__c IS NOT NULL AND 
 Migrated_Id__c LIKE '%-Migration'-- AND 
 --CreatedById = '0056C000004KpQ4QAK' 

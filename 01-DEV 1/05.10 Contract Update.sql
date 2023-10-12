@@ -19,12 +19,12 @@
 ---------------------------------------------------------------------------------
 USE Insert_Database_Name_Here;
 
-EXEC SF_Refresh 'INSERT_LINKED_SERVER_NAME', 'Account', 'yes'
-EXEC SF_Refresh 'INSERT_LINKED_SERVER_NAME', 'PriceBook2', 'yes'
-EXEC SF_Refresh 'INSERT_LINKED_SERVER_NAME', 'RecordType', 'yes'
-EXEC SF_Refresh 'INSERT_LINKED_SERVER_NAME', 'sbqq__Quote__c', 'yes'
-EXEC SF_Refresh 'INSERT_LINKED_SERVER_NAME', 'Opportunity', 'yes'
-EXEC SF_Refresh 'INSERT_LINKED_SERVER_NAME', 'Contract', 'yes'
+EXEC SF_Refresh 'SANDBOX_QA', 'Account', 'yes'
+EXEC SF_Refresh 'SANDBOX_QA', 'PriceBook2', 'yes'
+EXEC SF_Refresh 'SANDBOX_QA', 'RecordType', 'yes'
+EXEC SF_Refresh 'SANDBOX_QA', 'sbqq__Quote__c', 'yes'
+EXEC SF_Refresh 'SANDBOX_QA', 'Opportunity', 'yes'
+EXEC SF_Refresh 'SANDBOX_QA', 'Contract', 'yes'
 
 
 ---------------------------------------------------------------------------------
@@ -103,7 +103,7 @@ ADD [Sort] int IDENTITY (1,1)
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 USE Insert_Database_Name_Here;
-EXEC SF_Tableloader 'Upsert: bulkapi, batchsize(10)', 'INSERT_LINKED_SERVER_NAME', 'Contract_Load', 'Migration_Id2__c'
+EXEC SF_Tableloader 'Upsert: bulkapi, batchsize(10)', 'SANDBOX_QA', 'Contract_Load', 'Migration_Id2__c'
 
 ---------------------------------------------------------------------------------
 -- Error Review	

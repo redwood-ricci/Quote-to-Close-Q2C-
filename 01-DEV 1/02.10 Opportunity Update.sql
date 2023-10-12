@@ -16,11 +16,11 @@
 ---------------------------------------------------------------------------------
 -- Replicate Data
 ---------------------------------------------------------------------------------
-USE <Source>;
+USE SourceQA;
 
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'Account'
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'PriceBook2'
-EXEC <Source>.dbo.SF_Replicate 'INSERT_LINKED_SERVER_NAME', 'Opportunity'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Account'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'PriceBook2'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Opportunity'
 -- Add any other objects as needed
 
 
@@ -46,12 +46,12 @@ Select
 
 INTO <Staging>.dbo.Opportunity_Update
 
-FROM <Source>.dbo.Opportunity O
-LEFT OUTER JOIN <Source>.dbo.Account Acct 
+FROM SourceQA.dbo.Opportunity O
+LEFT OUTER JOIN SourceQA.dbo.Account Acct 
 	ON a.AccountID = Acct.ID 
 
 -- TBD if this join is needed
-INNER JOIN <Source>.dbo.Pricebook2 PB 
+INNER JOIN SourceQA.dbo.Pricebook2 PB 
 	ON O.PricebookID = PB.ID
 	
 ORDER BY Acct.ID
@@ -87,7 +87,7 @@ having count(*) > 1
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 USE <Staging>;
-EXEC <Staging>.dboSF_Tableloader 'UPDATE:Bulkapi,batchsize(10)','INSERT_LINKED_SERVER_NAME','Opportunity_Update'
+EXEC <Staging>.dboSF_Tableloader 'UPDATE:Bulkapi,batchsize(10)','SANDBOX_QA','Opportunity_Update'
 
 ---------------------------------------------------------------------------------
 -- Error Review	

@@ -18,12 +18,12 @@
 ---------------------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------------
 
-USE <Source>;
+USE SourceQA;
 
 ---------------------------------------------------------------------------------
 --- COPY DATA FROM SALESFORCE
 ---------------------------------------------------------------------------------
-EXEC <Source>.dbo.SF_Replicate 'INSERT LINKED SERVER HERE' ,'Contract', 'PkChunk'
+EXEC SourceQA.dbo.SF_Replicate 'INSERT LINKED SERVER HERE' ,'Contract', 'PkChunk'
 
 ---------------------------------------------------------------------------------
 --- Drop Staging Table
@@ -40,7 +40,7 @@ select
 	C.Migrated_ID__c,
 	'true' as SBQQ__RenewalQuoted__c
 into <Staging>.dbo.Contract_UPDATE_RenewalFlag  
-from <Source>.dbo.[Contract] C
+from SourceQA.dbo.[Contract] C
 
 where [status] = 'Activated'
 and SBQQ__RenewalForecast__c = 'true'
@@ -70,7 +70,7 @@ where error not like '%Success%'
 
 --select 
 --* 
---from  <Source>.dbo.[Contract] c 
+--from  SourceQA.dbo.[Contract] c 
 --where SBQQ__RenewalQuoted__c = 'false' 
 --and [status] = 'Activated'
 --and SBQQ__RenewalForecast__c = 'true'

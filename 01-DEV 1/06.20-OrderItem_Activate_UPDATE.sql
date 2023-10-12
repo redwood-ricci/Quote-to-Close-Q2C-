@@ -14,13 +14,13 @@
 --- Looks at Order and if the order got set to activated, we update the lines
 
 
-USE <Source>;
+USE SourceQA;
 
 ---------------------------------------------------------------------------------
 --- COPY DATA FROM SALESFORCE
 ---------------------------------------------------------------------------------
-EXEC [<Source>].dbo.SF_Replicate 'INSERT LINKED SERVER HERE', 'Order', 'PkChunk'
-EXEC [<Source>].dbo.SF_Replicate 'INSERT LINKED SERVER HERE', 'OrderItem', 'PkChunk'
+EXEC [SourceQA].dbo.SF_Replicate 'INSERT LINKED SERVER HERE', 'Order', 'PkChunk'
+EXEC [SourceQA].dbo.SF_Replicate 'INSERT LINKED SERVER HERE', 'OrderItem', 'PkChunk'
 
 ---------------------------------------------------------------------------------
 --- Drop Staging Table
@@ -40,8 +40,8 @@ select OI.ID
 	,OI.Migrated_id__c as REF_MigratedID
 	,O.[Status] as REF_OrderStatus
 into [<Staging>].dbo.OrderItem_Activate_UPDATE
-from [<Source>].dbo.[OrderItem] OI
-Left Join [<Source>].dbo.[Order] O
+from [SourceQA].dbo.[OrderItem] OI
+Left Join [SourceQA].dbo.[Order] O
 	on OI.OrderId  =  O.Id
 where O.Migrated_id__c like '%-Migration'
 and  O.Status = 'Activated' -- When we activate the order, automation is not kicking in and activating the associated lines
@@ -89,8 +89,8 @@ select * from
 --	,O.[Status] as REF_OrderStatus
 --	,OI.SBQQ__Activated__c
 --	,OI.SBQQ__Status__c
---from [<Source>].dbo.[OrderItem] OI
---Left Join [<Source>].dbo.[Order] O
+--from [SourceQA].dbo.[OrderItem] OI
+--Left Join [SourceQA].dbo.[Order] O
 --	on OI.OrderId  =  O.Id
 --where OI.Migrated_id__c like '%-Migration'
 --and  O.Status = 'Activated' 
