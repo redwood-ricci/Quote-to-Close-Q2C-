@@ -18,9 +18,9 @@
 ---------------------------------------------------------------------------------
 USE SourceQA;
 
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Account'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'PriceBook2'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Opportunity'
+-- EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Account'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'PriceBook2','pkchunk'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Opportunity','pkchunk'
 -- Add any other objects as needed
 
 
@@ -37,22 +37,22 @@ DROP TABLE StageQA.dbo.[Opportunity_Update]
 ---------------------------------------------------------------------------------
 
 Select 
-	A.ID as Id,
+	O.ID as Id,
 	CAST('' as nvarchar(2000)) as Error,
-	A.AccountID as REF_AccountID,
+	O.AccountID as REF_AccountID,
 
 -- MIGRATION FIELDS 																						
-	A.ID + '-NEO' as Opp_Migration_id__c
+	O.ID + '-NEO' as Opp_Migration_id__c
 
-INTO StageQA.dbo.Opportunity_Update
+-- INTO StageQA.dbo.Opportunity_Update
 
 FROM SourceQA.dbo.Opportunity O
-LEFT OUTER JOIN SourceQA.dbo.Account Acct 
-	ON a.AccountID = Acct.ID 
+INNER JOIN SourceQA.dbo.Account Acct 
+	ON O.AccountID = Acct.ID 
 
 -- TBD if this join is needed
 INNER JOIN SourceQA.dbo.Pricebook2 PB 
-	ON O.PricebookID = PB.ID
+	ON O.Pricebook2Id = PB.ID
 	
 ORDER BY Acct.ID
 

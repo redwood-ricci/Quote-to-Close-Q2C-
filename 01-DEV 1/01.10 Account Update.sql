@@ -19,7 +19,7 @@
 USE SourceQA;
 
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Account'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'User'
+-- EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'User'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'RecordType'
 
 ---------------------------------------------------------------------------------
