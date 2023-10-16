@@ -19,7 +19,7 @@ USE SourceQA;
 
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'ContentVersion'
 
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'ContentDocumentLink'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','ContentDocumentLink','PKCHUNK'
 
 
 
@@ -28,7 +28,7 @@ EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'ContentDocumentLink'
 ---------------------------------------------------------------------------------
 USE StageQA;
 
-if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'ContentDocumentLink_LoadAttachmentsB' AND TABLE_SCHEMA = 'dbo')
+if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'ContentDocumentLink_LoadAttachments' AND TABLE_SCHEMA = 'dbo')
 DROP TABLE StageQA.dbo.ContentDocumentLink_LoadAttachments
 
 ---------------------------------------------------------------------------------
@@ -43,8 +43,10 @@ Select Distinct
 	CASE Substring(map.ID, 1, 3) WHEN '02s' THEN 'V'  --- set on EmailMessage object to prevent editing by user
 								 ELSE 'I' END as ShareType,
 	'AllUsers' as Visibility
-	INTO StageQA.dbo.ContentDocumentLink_LoadAttachments
-	From SourceQA.dbo.ContentVersion a
+	--INTO StageQA.dbo.ContentDocumentLink_LoadAttachments
+	
+select *
+	From SourceQA.dbo.ContentVersion a --535 rows
 	inner join SourceQA.dbo.ContentDocumentLink CDL
 		on CDL. = A.ID
 

@@ -17,12 +17,14 @@
 ---------------------------------------------------------------------------------
 USE SourceQA;
 
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Account', 'yes'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'PriceBook2', 'yes'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'sbqq__Quote__c', 'yes'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Opportunity', 'yes'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Contract', 'yes'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Order', 'yes'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Account','PKCHUNK'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','PriceBook2','PKCHUNK'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','sbqq__Quote__c','PKCHUNK'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Opportunity','PKCHUNK'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Contract','PKCHUNK'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Order','PKCHUNK'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Invoice__c','PKCHUNK'
+
 
 
 ---------------------------------------------------------------------------------
