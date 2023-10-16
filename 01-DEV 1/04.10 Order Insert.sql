@@ -45,7 +45,7 @@ Select
 	CAST('' AS nvarchar(18)) AS [ID]
 	,CAST('' as nvarchar(2000)) as Error
 	,Qte.SBQQ__Account__c as AccountID
-	,Qte.SBQQ__Opportunity2__c as OpportunityId
+	,Qte.[SBQQ__Opportunity2__c] as OpportunityId
 	,Qte.SBQQ__PricebookId__c as Pricebook2Id
 	,Qte.ID as SBQQ__Quote__c
 	,Con.ID as ContractId
@@ -54,14 +54,16 @@ Select
 	,'Draft' as [Status]
 
 -- ADDRESSES
-	BillToContactId
+	,Qte.[SBQQ__PrimaryContact__c]
+	,inv.[Contact__c]  /* WHICH OF THESE WILL WE WANT IN BILL TO  CONTACT AND SHIP TO CONTACT */
+	--,BillToContactId
 	,Qte.SBQQ__BillingStreet__c
 	,Qte.SBQQ__BillingCity__c
 	,Qte.SBQQ__BillingState__c
 	,Qte.SBQQ__BillingPostalCode__c
 	,Qte.SBQQ__BillingCountry__c
 
-	,ShipToContactId
+	--,ShipToContactId
 	,Qte.SBQQ__ShippingStreet__c
 	,Qte.SBQQ__ShippingCity__c
 	,Qte.SBQQ__ShippingState__c
@@ -208,14 +210,17 @@ Select
 	,
 */
 -- MIGRATION FIELDS 																						
-	Con.ID as Migration_id__c
+	--Con.ID as Migration_id__c
 
+/* Need to work out what object drives this and what our total count should be for active */
 FROM SourceQA.dbo.SBQQ__Quote__c Qte
 inner join SourceQA.dbo.[Contract] Con
 	on Qte.ID = Con.SBQQ__Quote__c
 inner join  SourceQA.dbo.Invoice__c Inv
 	on Inv.Related_Contract__c = Con.ID
-	and Inv.Related_Opportunity__c =Con.SBQQ__Opportunity2__c
+	and Inv.Related_Opportunity__c = Con.[SBQQ__Opportunity__c]
+
+Where -- only things that can amend and renew
 
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
