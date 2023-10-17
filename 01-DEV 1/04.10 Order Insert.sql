@@ -41,52 +41,111 @@ DROP TABLE StageQA.dbo.[Order_Load]
 
 
 
-Select 
+Select  DISTINCT
 	CAST('' AS nvarchar(18)) AS [ID]
 	,CAST('' as nvarchar(2000)) as Error
-	,Qte.SBQQ__Account__c as AccountID
-	,Qte.[SBQQ__Opportunity2__c] as OpportunityId
-	,Qte.SBQQ__PricebookId__c as Pricebook2Id
-	,Qte.ID as SBQQ__Quote__c
+	,Con.AccountId as AccountID
+	,Con.SBQQ__Opportunity__c as OpportunityId
+	,coalesce(Con.PriceBook2__c , Qte.SBQQ__Pricebook__c ) as Pricebook2Id -- STill some nulls. Do we need a default value to coalesce in if nothing is found?
+	,con.SBQQ__Quote__c as SBQQ__Quote__c
 	,Con.ID as ContractId
 	,'True' as SBQQ__Contracted__c
-	,'' as SBQQ__ContractingMethod__c --Picklist Single Contract or By Subscription End Date --"By Subscription End Date" creates a separate Contract for each unique Subscription End Date, containing only those Subscriptions. "Single Contract" creates one Contract containing all Subscriptions, regardless of their End Dates.
+	,'Single Contract' as SBQQ__ContractingMethod__c --Picklist Single Contract or By Subscription End Date --"By Subscription End Date" creates a separate Contract for each unique Subscription End Date, containing only those Subscriptions. "Single Contract" creates one Contract containing all Subscriptions, regardless of their End Dates.
 	,'Draft' as [Status]
 
 -- ADDRESSES
-	,Qte.[SBQQ__PrimaryContact__c]
-	,inv.[Contact__c]  /* WHICH OF THESE WILL WE WANT IN BILL TO  CONTACT AND SHIP TO CONTACT */
-	--,BillToContactId
-	,Qte.SBQQ__BillingStreet__c
-	,Qte.SBQQ__BillingCity__c
-	,Qte.SBQQ__BillingState__c
-	,Qte.SBQQ__BillingPostalCode__c
-	,Qte.SBQQ__BillingCountry__c
+	,Coalesce(Qte.SBQQ__BillingStreet__c	,Con.[BillingStreet]		) as BillingStreet
+	,Coalesce(Qte.SBQQ__BillingCity__c		,Con.[BillingCity]			) as BillingCity
+	,Coalesce(Qte.SBQQ__BillingState__c		,Con.[BillingState]			) as BillingState
+	,Coalesce(Qte.SBQQ__BillingPostalCode__c,Con.[BillingPostalCode]	) as BillingPostalCode
+	,Coalesce(Qte.SBQQ__BillingCountry__c	,Con.[BillingCountry]		) as BillingCountry
+											
+	,Acct.BillingStreet as REF_AccountBillingStreet
+	,Acct.BillingCity as REF_AccountBillingCity
+	,Acct.BillingState as REF_AccountBillingState
+	,Acct.BillingPostalCode as REF_AccountBillingPostalCode
+	,Acct.BillingCountry as REF_AccountBillingCountry
 
-	--,ShipToContactId
-	,Qte.SBQQ__ShippingStreet__c
-	,Qte.SBQQ__ShippingCity__c
-	,Qte.SBQQ__ShippingState__c
-	,Qte.SBQQ__ShippingPostalCode__c
-	,Qte.SBQQ__ShippingCountry__c
+	,Coalesce(Qte.SBQQ__ShippingStreet__c		,Con.[ShippingStreet]		) as [ShippingStreet]
+	,Coalesce(Qte.SBQQ__ShippingCity__c			,Con.[ShippingCity]			) as [ShippingCity]
+	,Coalesce(Qte.SBQQ__ShippingState__c		,Con.[ShippingState]		) as [ShippingState]
+	,Coalesce(Qte.SBQQ__ShippingPostalCode__c	,Con.[ShippingPostalCode]	) as [ShippingPostalCode]
+	,Coalesce(Qte.SBQQ__ShippingCountry__c 		,Con.[ShippingCountry]		) as [ShippingCountry]
+
+	,Con.CreatedById as CreatedById -- Requires a permission set to allow migration user to touch audit fields --https://help.salesforce.com/s/articleView?id=000386875&language=en_US&type=1
+	-- do we want the createddate to match the contract or quote?
+	,Con.CurrencyIsoCode as CurrencyIsoCode
+	--,Inv.CurrencyIsoCode -- this should match the one on the quote?
+
+	,Coalesce(Con.[StartDate],Qte.SBQQ__StartDate__c )as EffectiveDate
+	,Coalesce(Con.[EndDate],Qte.SBQQ__EndDate__c )as EndDate
+	,Con.OwnerId 
+	--,Inv.OwnerId as OwnerId -- Are invoice owners the same as the quote owner or ContractOwner?
+	,Coalesce(Qte.SBQQ__PaymentTerms__c,'Net 30') as SBQQ__PaymentTerm__c --Net 30 is the default value on the order object for this.
+	,Coalesce(Con.SBQQ__RenewalTerm__c,Qte.SBQQ__RenewalTerm__c )as SBQQ__RenewalTerm__c
+	,Coalesce(Con.SBQQ__RenewalUpliftRate__c ,Qte.SBQQ__RenewalUpliftRate__c ) as SBQQ__RenewalUpliftRate__c
+
+-- MIGRATION FIELDS 																						
+	,Con.ID  as Ord_Migration_id__c -- needs created on each object. Each object's field should be unique with the object name and migration_id__c at the end to avoid twin field issues. Field should be text, set to unique and external
+
+into StageQA.dbo.[Order_Load]
+
+FROM SourceQA.dbo.[Contract] Con
+left join SourceQA.dbo.SBQQ__Quote__c Qte
+	on Qte.ID = Con.SBQQ__Quote__c
+left join SourceQA.dbo.Opportunity O
+	on Con.SBQQ__Opportunity__c = O.ID
+left join SourceQA.dbo.Account Acct
+	on Con.AccountId = Acct.ID
+
+Where EndDate >= getdate()
+and Status = 'Activated'
+
+--Con.ID = '8003t000008D4Z8AAK' --'8003t000008aU32AAE'
+-- only things that can amend and renew
+
+order by Con.ID
+---------------------------------------------------------------------------------
+-- Add Sort Column to speed Bulk Load performance if necessary
+---------------------------------------------------------------------------------
+ALTER TABLE StageQA.dbo.[Order_Load]
+ADD [Sort] int 
+GO
+WITH NumberedRows AS (
+  SELECT *, ROW_NUMBER() OVER (ORDER BY AccountID) AS OrderRowNumber
+  FROM StageQA.dbo.[Order_Load]
+)
+UPDATE NumberedRows
+SET [Sort] = OrderRowNumber;
 
 
-	,Qte.CreatedById as CreatedById
-	,Qte.CurrencyIsoCode as CurrencyIsoCode
-	,Inv.CurrencyIsoCode -- this should match the one on the quote?
+---------------------------------------------------------------------------------
+-- Validations
+---------------------------------------------------------------------------------
 
-	,Qte.SBQQ__StartDate__c as EffectiveDate
-	,Qte.SBQQ__EndDate__c as EndDate
-	--,Qte.OwnerId 
-	,Inv.OwnerId as OwnerId -- Are invoice owners the same as the quote owner or ContractOwner?
-	,Qte.SBQQ__PaymentTerms__c as SBQQ__PaymentTerm__c
-	,Qte.SBQQ__RenewalTerm__c as SBQQ__RenewalTerm__c
-	,Qte.SBQQ__RenewalUpliftRate__c as SBQQ__RenewalUpliftRate__c
+
+
+---------------------------------------------------------------------------------
+-- Load Data to Salesforce
+---------------------------------------------------------------------------------
+
+EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','SANDBOX_QA','Order_Load'
+
+---------------------------------------------------------------------------------
+-- Error Review	
+---------------------------------------------------------------------------------
+
+-- Select error, * from Order_Load_Result a where error not like '%success%'
+
+
+
+
 
 /********************************************************************/
 /* INVOICE FIELDS													*/
 /********************************************************************/
- 
+/*
+	--,INV.Id
 	,Inv.A_R_Notes__c
 	,Inv.Account_Billing_Address__c
 	,Inv.Account_Id__c
@@ -94,7 +153,7 @@ Select
 	,Inv.Account_Shipping_Address__c
 	,Inv.Account_Type__c
 	,Inv.ACV_Booking_Cohort_Month__c
-	,Inv.Amount__c
+	--,Inv.Amount__c
 	,Inv.ARR_Product__c
 	,Inv.Billing_City__c
 	,Inv.Billing_Country__c
@@ -126,11 +185,11 @@ Select
 	,Inv.Contact__c
 	,Inv.Contract_End_Date__c
 	,Inv.Contract_Start_Date__c
-	,Inv.CreatedById -- should this come from Quote or Invoice
-	,Inv.CreatedDate -- should this come from Quote or Invoice
+	--,Inv.CreatedById -- should this come from Quote or Invoice
+	--,Inv.CreatedDate -- should this come from Quote or Invoice
 
 	,Inv.Deployment_Method__c
-	,Inv.Invoice_Date__c
+	--,Inv.Invoice_Date__c
 	,Inv.Invoice_Method__c
 	,Inv.Invoice_Notes__c
 	,Inv.Invoice_Status__c
@@ -181,6 +240,7 @@ Select
 	,Inv.Total_Sales_Tax__c
 	,Inv.Workday_Contract_Number__c
 	,Inv.Workday_Invoice_Id__c
+*/
 -- AMOUNTS 
 	--TotalAmount
 
@@ -209,47 +269,5 @@ Select
 	,PoDate
 	,
 */
--- MIGRATION FIELDS 																						
-	--Con.ID as Migration_id__c
 
-/* Need to work out what object drives this and what our total count should be for active */
-FROM SourceQA.dbo.SBQQ__Quote__c Qte
-inner join SourceQA.dbo.[Contract] Con
-	on Qte.ID = Con.SBQQ__Quote__c
-inner join  SourceQA.dbo.Invoice__c Inv
-	on Inv.Related_Contract__c = Con.ID
-	and Inv.Related_Opportunity__c = Con.[SBQQ__Opportunity__c]
-
-Where -- only things that can amend and renew
-
----------------------------------------------------------------------------------
--- Add Sort Column to speed Bulk Load performance if necessary
----------------------------------------------------------------------------------
-ALTER TABLE StageQA.dbo.[Order_Load]
-ADD [Sort] int 
-GO
-WITH NumberedRows AS (
-  SELECT *, ROW_NUMBER() OVER (ORDER BY AccountID) AS OrderRowNumber
-  FROM StageQA.dbo.[Order_Load]
-)
-UPDATE NumberedRows
-SET [Sort] = OrderRowNumber;
-
-
----------------------------------------------------------------------------------
--- Validations
----------------------------------------------------------------------------------
-
-
-
----------------------------------------------------------------------------------
--- Load Data to Salesforce
----------------------------------------------------------------------------------
-
-EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','SANDBOX_QA','Order_Load'
-
----------------------------------------------------------------------------------
--- Error Review	
----------------------------------------------------------------------------------
-
--- Select error, * from Order_Load_Result a where error not like '%success%'
+--EXEC StageQA.dbo.SF_Tableloader 'DELETE','SANDBOX_QA','Order_Load_result'
