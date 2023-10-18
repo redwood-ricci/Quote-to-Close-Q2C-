@@ -49,28 +49,27 @@ Select  DISTINCT
 	,coalesce(Con.PriceBook2__c , Qte.SBQQ__Pricebook__c ) as Pricebook2Id -- STill some nulls. Do we need a default value to coalesce in if nothing is found?
 	,con.SBQQ__Quote__c as SBQQ__Quote__c
 	,Con.ID as ContractId
-	,'True' as SBQQ__Contracted__c
+--	,'True' as SBQQ__Contracted__c
 	,'Single Contract' as SBQQ__ContractingMethod__c --Picklist Single Contract or By Subscription End Date --"By Subscription End Date" creates a separate Contract for each unique Subscription End Date, containing only those Subscriptions. "Single Contract" creates one Contract containing all Subscriptions, regardless of their End Dates.
 	,'Draft' as [Status]
 
 -- ADDRESSES
-	,Coalesce(Qte.SBQQ__BillingStreet__c	,Con.[BillingStreet]		) as BillingStreet
-	,Coalesce(Qte.SBQQ__BillingCity__c		,Con.[BillingCity]			) as BillingCity
-	,Coalesce(Qte.SBQQ__BillingState__c		,Con.[BillingState]			) as BillingState
-	,Coalesce(Qte.SBQQ__BillingPostalCode__c,Con.[BillingPostalCode]	) as BillingPostalCode
-	,Coalesce(Qte.SBQQ__BillingCountry__c	,Con.[BillingCountry]		) as BillingCountry
-											
+	,dbo.MapBillingCountry(Coalesce(Qte.SBQQ__BillingStreet__c	,Con.[BillingStreet]		)) as BillingStreet
+	,dbo.MapBillingCountry(Coalesce(Qte.SBQQ__BillingCity__c		,Con.[BillingCity]			)) as BillingCity
+	,dbo.MapBillingCountry(Coalesce(Qte.SBQQ__BillingState__c		,Con.[BillingState]			)) as BillingState
+	,dbo.MapBillingCountry(Coalesce(Qte.SBQQ__BillingPostalCode__c,Con.[BillingPostalCode]	)) as BillingPostalCode
+	,dbo.MapBillingCountry(Coalesce(Qte.SBQQ__BillingCountry__c	,Con.[BillingCountry])) as BillingCountry
 	,Acct.BillingStreet as REF_AccountBillingStreet
 	,Acct.BillingCity as REF_AccountBillingCity
 	,Acct.BillingState as REF_AccountBillingState
 	,Acct.BillingPostalCode as REF_AccountBillingPostalCode
 	,Acct.BillingCountry as REF_AccountBillingCountry
 
-	,Coalesce(Qte.SBQQ__ShippingStreet__c		,Con.[ShippingStreet]		) as [ShippingStreet]
-	,Coalesce(Qte.SBQQ__ShippingCity__c			,Con.[ShippingCity]			) as [ShippingCity]
-	,Coalesce(Qte.SBQQ__ShippingState__c		,Con.[ShippingState]		) as [ShippingState]
-	,Coalesce(Qte.SBQQ__ShippingPostalCode__c	,Con.[ShippingPostalCode]	) as [ShippingPostalCode]
-	,Coalesce(Qte.SBQQ__ShippingCountry__c 		,Con.[ShippingCountry]		) as [ShippingCountry]
+	,dbo.MapBillingCountry(Coalesce(Qte.SBQQ__ShippingStreet__c		,Con.[ShippingStreet]		)) as [ShippingStreet]
+	,dbo.MapBillingCountry(Coalesce(Qte.SBQQ__ShippingCity__c			,Con.[ShippingCity]		)	) as [ShippingCity]
+	,dbo.MapBillingCountry(Coalesce(Qte.SBQQ__ShippingState__c		,Con.[ShippingState]		)) as [ShippingState]
+	,dbo.MapBillingCountry(Coalesce(Qte.SBQQ__ShippingPostalCode__c	,Con.[ShippingPostalCode])) as [ShippingPostalCode]
+	,dbo.MapBillingCountry(Coalesce(Qte.SBQQ__ShippingCountry__c 		,Con.[ShippingCountry])	) as [ShippingCountry]
 
 	,Con.CreatedById as CreatedById -- Requires a permission set to allow migration user to touch audit fields --https://help.salesforce.com/s/articleView?id=000386875&language=en_US&type=1
 	-- do we want the createddate to match the contract or quote?
@@ -123,6 +122,8 @@ SET [Sort] = OrderRowNumber;
 -- Validations
 ---------------------------------------------------------------------------------
 
+-- select * from StageQA.dbo.[Order_Load]
+-- order by sort
 
 
 ---------------------------------------------------------------------------------
@@ -136,9 +137,15 @@ EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','SANDBOX_QA','Ord
 ---------------------------------------------------------------------------------
 
 -- Select error, * from Order_Load_Result a where error not like '%success%'
+Select error, count(*) as num from Order_Load_Result a
+where error not like '%success%'
+group by error
+order by num desc
 
+Select error, * from Order_Load_Result a where error like '%a problem with this country, even though it may appear correct%'
 
-
+Select BillingCountry, count(*) from Order_Load_Result a where error like '%a problem with this country, even though it may appear correct%'
+group by BillingCountry
 
 
 /********************************************************************/
