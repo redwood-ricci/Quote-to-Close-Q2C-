@@ -38,7 +38,7 @@ DROP TABLE StageQA.dbo.[Order_Load]
 ---------------------------------------------------------------------------------
 -- Create Staging Table
 ---------------------------------------------------------------------------------
-
+-- select primary from SourceQA.dbo.Opportunity where id = '0063t000012TzCQAA0'
 
 
 Select  DISTINCT
@@ -49,28 +49,27 @@ Select  DISTINCT
 	,coalesce(Con.PriceBook2__c , Qte.SBQQ__Pricebook__c ) as Pricebook2Id -- STill some nulls. Do we need a default value to coalesce in if nothing is found?
 	,con.SBQQ__Quote__c as SBQQ__Quote__c
 	,Con.ID as ContractId
-	,'True' as SBQQ__Contracted__c
+--	,'True' as SBQQ__Contracted__c
 	,'Single Contract' as SBQQ__ContractingMethod__c --Picklist Single Contract or By Subscription End Date --"By Subscription End Date" creates a separate Contract for each unique Subscription End Date, containing only those Subscriptions. "Single Contract" creates one Contract containing all Subscriptions, regardless of their End Dates.
 	,'Draft' as [Status]
 
 -- ADDRESSES
-	,Coalesce(Qte.SBQQ__BillingStreet__c	,Con.[BillingStreet]		) as BillingStreet
-	,Coalesce(Qte.SBQQ__BillingCity__c		,Con.[BillingCity]			) as BillingCity
-	,Coalesce(Qte.SBQQ__BillingState__c		,Con.[BillingState]			) as BillingState
-	,Coalesce(Qte.SBQQ__BillingPostalCode__c,Con.[BillingPostalCode]	) as BillingPostalCode
-	,Coalesce(Qte.SBQQ__BillingCountry__c	,Con.[BillingCountry]		) as BillingCountry
-											
+	,dbo.scrub_address(Coalesce(Qte.SBQQ__BillingStreet__c	,Con.[BillingStreet]		)) as BillingStreet
+	,dbo.scrub_address(Coalesce(Qte.SBQQ__BillingCity__c		,Con.[BillingCity]			)) as BillingCity
+	,dbo.scrub_address(Coalesce(Qte.SBQQ__BillingState__c		,Con.[BillingState]			)) as BillingState
+	,dbo.scrub_address(Coalesce(Qte.SBQQ__BillingPostalCode__c,Con.[BillingPostalCode]	)) as BillingPostalCode
+	,dbo.scrub_address(Coalesce(Qte.SBQQ__BillingCountry__c	,Con.[BillingCountry])) as BillingCountry
 	,Acct.BillingStreet as REF_AccountBillingStreet
 	,Acct.BillingCity as REF_AccountBillingCity
 	,Acct.BillingState as REF_AccountBillingState
 	,Acct.BillingPostalCode as REF_AccountBillingPostalCode
 	,Acct.BillingCountry as REF_AccountBillingCountry
 
-	,Coalesce(Qte.SBQQ__ShippingStreet__c		,Con.[ShippingStreet]		) as [ShippingStreet]
-	,Coalesce(Qte.SBQQ__ShippingCity__c			,Con.[ShippingCity]			) as [ShippingCity]
-	,Coalesce(Qte.SBQQ__ShippingState__c		,Con.[ShippingState]		) as [ShippingState]
-	,Coalesce(Qte.SBQQ__ShippingPostalCode__c	,Con.[ShippingPostalCode]	) as [ShippingPostalCode]
-	,Coalesce(Qte.SBQQ__ShippingCountry__c 		,Con.[ShippingCountry]		) as [ShippingCountry]
+	,dbo.scrub_address(Coalesce(Qte.SBQQ__ShippingStreet__c		,Con.[ShippingStreet]		)) as [ShippingStreet]
+	,dbo.scrub_address(Coalesce(Qte.SBQQ__ShippingCity__c			,Con.[ShippingCity]		)	) as [ShippingCity]
+	,dbo.scrub_address(Coalesce(Qte.SBQQ__ShippingState__c		,Con.[ShippingState]		)) as [ShippingState]
+	,dbo.scrub_address(Coalesce(Qte.SBQQ__ShippingPostalCode__c	,Con.[ShippingPostalCode])) as [ShippingPostalCode]
+	,dbo.scrub_address(Coalesce(Qte.SBQQ__ShippingCountry__c 		,Con.[ShippingCountry])	) as [ShippingCountry]
 
 	,Con.CreatedById as CreatedById -- Requires a permission set to allow migration user to touch audit fields --https://help.salesforce.com/s/articleView?id=000386875&language=en_US&type=1
 	-- do we want the createddate to match the contract or quote?
@@ -86,7 +85,7 @@ Select  DISTINCT
 	,Coalesce(Con.SBQQ__RenewalUpliftRate__c ,Qte.SBQQ__RenewalUpliftRate__c ) as SBQQ__RenewalUpliftRate__c
 
 -- MIGRATION FIELDS 																						
-	,Con.ID  as Ord_Migration_id__c -- needs created on each object. Each object's field should be unique with the object name and migration_id__c at the end to avoid twin field issues. Field should be text, set to unique and external
+	,Con.ID  as Order_Migration_id__c -- needs created on each object. Each object's field should be unique with the object name and migration_id__c at the end to avoid twin field issues. Field should be text, set to unique and external
 
 into StageQA.dbo.[Order_Load]
 
@@ -100,6 +99,7 @@ left join SourceQA.dbo.Account Acct
 
 Where EndDate >= getdate()
 and Status = 'Activated'
+and Acct.Test_Account__c = 'false'
 
 --Con.ID = '8003t000008D4Z8AAK' --'8003t000008aU32AAE'
 -- only things that can amend and renew
@@ -117,12 +117,56 @@ WITH NumberedRows AS (
 )
 UPDATE NumberedRows
 SET [Sort] = OrderRowNumber;
+SELECT *
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = 'Order_Load';
 
 
 ---------------------------------------------------------------------------------
 -- Validations
 ---------------------------------------------------------------------------------
 
+---------------------------------------------------------------------------------
+-- Scrub
+---------------------------------------------------------------------------------
+
+-- select * from Order_Load where OpportunityId = '0063t000013TVp3AAG'
+
+Update x
+Set BillingState = Null
+from StageQA.dbo.[Order_Load] x
+where BillingState in ('Taichung City')
+
+-- Set billing country equal to account country when the billing state and the account state are the same but the country is null
+-- select billingstate, BillingCountry, REF_AccountBillingState, REF_AccountBillingCountry
+Update x
+Set BillingCountry = REF_AccountBillingCountry
+from StageQA.dbo.[Order_Load] x
+where billingcountry is null
+and billingstate = REF_AccountBillingState
+
+
+Update x
+Set ShippingState = 'New South Wales'
+from StageQA.dbo.[Order_Load] x
+where ShippingState = 'Pennsylvania' and ShippingCountry = 'Australia'
+
+Update x
+Set ShippingCountry = 'Australia'
+from StageQA.dbo.[Order_Load] x
+where ShippingCity = 'Melbourne' and ShippingCountry = 'United States'
+
+Update x
+Set ShippingCountry = 'Canada'
+from StageQA.dbo.[Order_Load] x
+where ShippingState in ('Ontario','Quebec') and ShippingCountry = 'United States'
+
+-- Add berkshire as state in united kingdom
+-- Add Middlesex as state in united kingdom
+
+
+-- select * from StageQA.dbo.[Order_Load]
+-- order by sort
 
 
 ---------------------------------------------------------------------------------
@@ -134,11 +178,19 @@ EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','SANDBOX_QA','Ord
 ---------------------------------------------------------------------------------
 -- Error Review	
 ---------------------------------------------------------------------------------
-
+-- quote a363t000002h7SqAAI and opportunity are in different currencies. The quote has the correct values
+Select error, count(*) as num from Order_Load_Result
 -- Select error, * from Order_Load_Result a where error not like '%success%'
+Select error, count(*) as num from Order_Load_Result a
+where error not like '%success%'
+group by error
+order by num desc
 
+Select error, * from Order_Load_Result a where error like '%Opportunity must have%'
+Select error, * from Order_Load -- a where error like '%Opportunity must have%'
 
-
+Select BillingCountry, count(*) from Order_Load_Result a where error like '%a problem with this country, even though it may appear correct%'
+group by BillingCountry
 
 
 /********************************************************************/
@@ -270,4 +322,4 @@ EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','SANDBOX_QA','Ord
 	,
 */
 
---EXEC StageQA.dbo.SF_Tableloader 'DELETE','SANDBOX_QA','Order_Load_result'
+-- EXEC StageQA.dbo.SF_Tableloader 'DELETE','SANDBOX_QA','Order_Load_result'
