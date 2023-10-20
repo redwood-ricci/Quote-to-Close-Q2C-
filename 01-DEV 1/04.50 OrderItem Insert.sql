@@ -88,7 +88,7 @@ Select
 	,Sub.SBQQ__SegmentLabel__c
 	,COALESCE(Sub.SBQQ__SubscriptionPricing__c, QL.SBQQ__SubscriptionPricing__c) AS SBQQ__SubscriptionPricing__c
 	,COALESCE(Sub.[SBQQ__StartDate__c], QL.SBQQ__StartDate__c ) as ServiceDate
-	,QL.SBQQ__SubscriptionTerm__c AS SBQQ__SubscriptionTerm__c
+	,COALESE(QL.SBQQ__SubscriptionTerm__c, Inv.Subscription_Term__c) AS SBQQ__SubscriptionTerm__c
 	,COALESCE(Sub.SBQQ__SubscriptionType__c, QL.SBQQ__SubscriptionType__c) AS SBQQ__SubscriptionType__c
 	,QL.SBQQ__TaxCode__c
 	,COALESCE(Sub.SBQQ__TermDiscountSchedule__c, QL.SBQQ__TermDiscountSchedule__c) AS SBQQ__TermDiscountSchedule__c
@@ -102,6 +102,8 @@ Select
 	,SUB.ID as SBQQ__Subscription__c
 	,SUB.SBQQ__RequiredByProduct__c as SBQQ__RequiredBy__c
 	,SUB.SBQQ__TerminatedDate__c as SBQQ__TerminatedDate__c
+	,SUB.OwnerId 
+
 -- Contract
 	,Con.ID as SBQQ__Contract__c
 	,'true' as 	SBQQ__Contracted__c
@@ -178,7 +180,6 @@ Select
 	,Inv.Opportunity_Type__c
 	,Inv.Order_Form_Number__c
 	,Inv.Order_Notes__c
-	,Inv.OwnerId -- should this come from Quote or Invoice
 	,Inv.Partner__c
 	,Inv.Payment_Terms__c
 	,Inv.Planned_Invoice_Date__c
@@ -207,7 +208,7 @@ Select
 	,Inv.Support_Level__c
 	,Inv.Test_Account__c
 	,Inv.Total__c
-	,Inv.Total_Sales_Tax__c
+	,Inv.Total_Sales_Tax__c as [SBQQ__TaxAmount__c]
 	,Inv.Workday_Contract_Number__c
 	,Inv.Workday_Invoice_Id__c
 
