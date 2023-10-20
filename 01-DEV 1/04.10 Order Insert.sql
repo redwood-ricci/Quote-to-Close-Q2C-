@@ -38,7 +38,7 @@ DROP TABLE StageQA.dbo.[Order_Load]
 ---------------------------------------------------------------------------------
 -- Create Staging Table
 ---------------------------------------------------------------------------------
-
+-- select primary from SourceQA.dbo.Opportunity where id = '0063t000012TzCQAA0'
 
 
 Select  DISTINCT
@@ -157,14 +157,9 @@ from StageQA.dbo.[Order_Load] x
 where ShippingCity = 'Melbourne' and ShippingCountry = 'United States'
 
 Update x
-Set ShippingCountry = 'Australia'
-from StageQA.dbo.[Order_Load] x
-where ShippingCity = 'Melbourne' and ShippingCountry = 'United States'
-
-Update x
 Set ShippingCountry = 'Canada'
 from StageQA.dbo.[Order_Load] x
-where ShippingCity in ('Ontario','Quebec') and ShippingCountry = 'United States'
+where ShippingState in ('Ontario','Quebec') and ShippingCountry = 'United States'
 
 -- Add berkshire as state in united kingdom
 -- Add Middlesex as state in united kingdom
@@ -183,6 +178,7 @@ EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','SANDBOX_QA','Ord
 ---------------------------------------------------------------------------------
 -- Error Review	
 ---------------------------------------------------------------------------------
+-- quote a363t000002h7SqAAI and opportunity are in different currencies. The quote has the correct values
 Select error, count(*) as num from Order_Load_Result
 -- Select error, * from Order_Load_Result a where error not like '%success%'
 Select error, count(*) as num from Order_Load_Result a
@@ -190,7 +186,8 @@ where error not like '%success%'
 group by error
 order by num desc
 
-Select error, * from Order_Load_Result a where error like '%FIELD_INTEGRITY%'
+Select error, * from Order_Load_Result a where error like '%Opportunity must have%'
+Select error, * from Order_Load -- a where error like '%Opportunity must have%'
 
 Select BillingCountry, count(*) from Order_Load_Result a where error like '%a problem with this country, even though it may appear correct%'
 group by BillingCountry
@@ -325,4 +322,4 @@ group by BillingCountry
 	,
 */
 
---EXEC StageQA.dbo.SF_Tableloader 'DELETE','SANDBOX_QA','Order_Load_result'
+-- EXEC StageQA.dbo.SF_Tableloader 'DELETE','SANDBOX_QA','Order_Load_result'
