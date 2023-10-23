@@ -44,7 +44,9 @@ Select Distinct
 	O.ID as LinkedEntityID,
 	CDL.ShareType as ShareType,
 	CDL.Visibility as Visibility, --InternalUsers, AllUsers
-	S.Invoice__c as REF_InvoiceID -- Same ID as the original LinkedEntityID
+	S.Invoice__c as REF_InvoiceID ,-- Same ID as the original LinkedEntityID
+	S.SBQQ__Account__c as REF_Account,
+	S.SBQQ__Contract__c as REF_Contract
 	--INTO StageQA.dbo.ContentDocumentLink_LoadAttachments
 	
 
