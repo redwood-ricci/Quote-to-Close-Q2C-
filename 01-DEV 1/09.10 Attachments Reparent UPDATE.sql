@@ -16,10 +16,12 @@
 -- Replicate Data
 ---------------------------------------------------------------------------------
 USE SourceQA;
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Order'
+--EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'ContentDocument'
 
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'ContentVersion'
+--EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'ContentVersion'
 
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','ContentDocumentLink','PKCHUNK'
+--EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','ContentDocumentLink','PKCHUNK'
 
 
 
@@ -38,19 +40,23 @@ DROP TABLE StageQA.dbo.ContentDocumentLink_LoadAttachments
 Select Distinct
 	CAST('' as nvarchar(18)) as ID,
 	CAST('' as nvarchar(2000)) as error,
-	a.ContentDocumentID as ContentDocumentID,
-	'' as LinkedEntityID,
-	CASE Substring(map.ID, 1, 3) WHEN '02s' THEN 'V'  --- set on EmailMessage object to prevent editing by user
-								 ELSE 'I' END as ShareType,
-	'AllUsers' as Visibility
+	ContentDocumentID as ContentDocumentID,
+	O.ID as LinkedEntityID,
+	CDL.ShareType as ShareType,
+	CDL.Visibility as Visibility, --InternalUsers, AllUsers
+	S.Invoice__c as REF_InvoiceID -- Same ID as the original LinkedEntityID
 	--INTO StageQA.dbo.ContentDocumentLink_LoadAttachments
 	
-select *
-	From SourceQA.dbo.ContentVersion a --535 rows
-	inner join SourceQA.dbo.ContentDocumentLink CDL
-		on CDL. = A.ID
 
-where -- Filter so we get the ones that are linked to custom Invoice object
+  FROM [SourceQA].[dbo].[ContentDocumentLink] CDL
+  Inner Join [SourceQA].[dbo].[SBQQ__Subscription__c] S -- Not all subscriptions have an invoice, so using Inner join. Using this to get ContractID, which is what is used to create an order
+	on CDL.LinkedEntityId = S.Invoice__c
+  left join [SourceQA].[dbo].[Contract] Con
+	on S.SBQQ__Contract__c = Con.ID
+  left join [SourceQA].[dbo].[Order] O -- Joining back to Order table. Must replicate above for this to work.
+	on Con.ID = O.Order_Migration_id__c
+
+-- If we need to link to the Order Items and Not Order, then the join can go from the subscription to the OrderItem's Migrated ID field and LinkedEntityID will need updated.
 
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
