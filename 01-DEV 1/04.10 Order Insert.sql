@@ -125,6 +125,14 @@ WHERE TABLE_NAME = 'Order_Load';
 ---------------------------------------------------------------------------------
 -- Validations
 ---------------------------------------------------------------------------------
+select Order_Migration_id__c, count(*)
+from StageQA.dbo.[Order_Load]
+group by Order_Migration_id__c
+having count(*) > 1
+
+select *
+ from StageQA.dbo.[Order_Load]
+
 
 ---------------------------------------------------------------------------------
 -- Scrub
@@ -191,6 +199,12 @@ Select error, * from Order_Load -- a where error like '%Opportunity must have%'
 
 Select BillingCountry, count(*) from Order_Load_Result a where error like '%a problem with this country, even though it may appear correct%'
 group by BillingCountry
+
+
+/* VIEW LOGS */
+SELECT *
+  FROM [StageQA].[dbo].[DBAmp_TableLoader_Perf]
+  order by LogTime desc
 
 
 /********************************************************************/
