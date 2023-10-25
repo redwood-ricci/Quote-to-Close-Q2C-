@@ -45,8 +45,13 @@ USE StageQA;
 Select 
 	Con.ID as Id,
 	CAST('' as nvarchar(2000)) as Error,
-	O.ID as [SBQQ__Order__c],
 
+	O.ID as [SBQQ__Order__c], -- update existing Contract to link to newly created Order
+
+
+	/* ADD IN ANY OTHER UPDATES, IF NEEDED */
+
+	/* REFERENCE FIELDS */
 
 	Acct.ID as REF_AccountId, 
 	Oppty.Id as REF_OpportunityID, 
@@ -74,7 +79,7 @@ ALTER TABLE StageQA.dbo.[Contract_Load]
 ADD [Sort] int 
 GO
 WITH NumberedRows AS (
-  SELECT *, ROW_NUMBER() OVER (ORDER BY AccountID) AS OrderRowNumber
+  SELECT *, ROW_NUMBER() OVER (ORDER BY REF_AccountId) AS OrderRowNumber
   FROM StageQA.dbo.[Contract_Load]
 )
 UPDATE NumberedRows
@@ -101,10 +106,10 @@ select *
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 USE StageQA;
-EXEC SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','SANDBOX_QA','Contract_Load'
+EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','SANDBOX_QA','Contract_Load'
 
 ---------------------------------------------------------------------------------
 -- Error Review	
 ---------------------------------------------------------------------------------
 
--- Select error, * from Contract_Load_Result a where error not like '%success%'
+-- Select error, * from StageQA.dbo.Contract_Load_Result a where error not like '%success%'
