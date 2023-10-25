@@ -24,7 +24,7 @@ USE SourceQA;
 --- COPY DATA FROM SALESFORCE
 ---------------------------------------------------------------------------------
 
-EXEC SourceQA.dbo.SF_Replicate 'INSERT LINKED SERVER HERE' ,'Order', 'PkChunk'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Order','PkChunk'
 
 ---------------------------------------------------------------------------------
 --- Drop Staging Table
@@ -42,15 +42,11 @@ GO
 SELECT  
 	ID,
 	CAST('' AS nvarchar(255)) AS Error,
-	'True' as Force_Sync__c,
 	'Activated' as [Status]
 
 into StageQA.dbo.Order_UPDATE
 FROM  SourceQA.dbo.[Order]
-WHERE Migrated_Id__c IS NOT NULL AND 
-Migrated_Id__c LIKE '%-Migration'-- AND 
---CreatedById = '0056C000004KpQ4QAK' 
-
+WHERE Order_Migration_id__c IS NOT NULL
 
 
 
@@ -65,12 +61,14 @@ select * from StageQA.dbo.Order_UPDATE
 ---------------------------------------------------------------------------------
 -- Load Subscription Data To Full Sandbox -- 
 ---------------------------------------------------------------------------------
-EXEC StageQA.dbo.SF_TableLoader 'UPDATE','INSERT LINKED SERVER HERE','Order_UPDATE'
+EXEC StageQA.dbo.SF_TableLoader 'UPDATE','SANDBOX_QA','Order_UPDATE'
 ---------------------------------------------------------------------------------
 --- ERROR REVIEW
 ---------------------------------------------------------------------------------
 Select * from StageQA.dbo.Order_UPDATE_Result where error not like '%Success%'
---error, count(*)
+
+
+Select error, count(*)
 from StageQA.dbo.Order_UPDATE_Result
 where error not like '%Success%'
 group by error
