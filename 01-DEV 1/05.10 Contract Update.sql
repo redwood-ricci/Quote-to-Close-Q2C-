@@ -113,3 +113,5 @@ EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','SANDBOX_QA','Con
 ---------------------------------------------------------------------------------
 
 -- Select error, * from StageQA.dbo.Contract_Load_Result a where error not like '%success%'
+
+-- NOTE WITH UPDATES, DO NOT USE DBAMP'S DELETE. SAVE THE ORIGINAL VALUE AND JUST SET IT BACK WITH ANOTHER UPDATE
