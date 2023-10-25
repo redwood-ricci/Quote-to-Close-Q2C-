@@ -18,12 +18,32 @@
 ---------------------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------------
 
+
+
+
+--NOTE: This script should only be used if you need to bulk trigger renewal quotes on contracts
+--DO NOT RUN THIS UNLESS THAT IS THE INTENTION.
+--If this script is not needed, remove it from the Migration deployment and move it into the template library
+
+-- A variation of this cript can set the Renewal Foreast flag to trigger CPQ to create the Renewal Opportunities in BULK
+
+
+
+
+
+
+
+
+
+
+
+
 USE SourceQA;
 
 ---------------------------------------------------------------------------------
 --- COPY DATA FROM SALESFORCE
 ---------------------------------------------------------------------------------
-EXEC SourceQA.dbo.SF_Replicate 'INSERT LINKED SERVER HERE' ,'Contract', 'PkChunk'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA' ,'Contract', 'PkChunk'
 
 ---------------------------------------------------------------------------------
 --- Drop Staging Table
@@ -37,7 +57,7 @@ DROP TABLE StageQA.dbo.Contract_UPDATE_RenewalFlag;
 select 
 	C.ID,
 	Cast('' as nvarchar(2000)) as Error,
-	C.Migrated_ID__c,
+	C.Contract_Migration_ID__c,
 	'true' as SBQQ__RenewalQuoted__c
 into StageQA.dbo.Contract_UPDATE_RenewalFlag  
 from SourceQA.dbo.[Contract] C
@@ -59,7 +79,7 @@ ADD [Sort] int IDENTITY (1,1)
 ---------------------------------------------------------------------------------
 -- Load Subscription Data To Full Sandbox -- 
 ---------------------------------------------------------------------------------
-EXEC StageQA.dbo.SF_TableLoader 'UPDATE','INSERT LINKED SERVER HERE','Contract_UPDATE_RenewalFlag' 
+EXEC StageQA.dbo.SF_TableLoader 'UPDATE','SANDBOX_QA','Contract_UPDATE_RenewalFlag' 
 ---------------------------------------------------------------------------------
 --- ERROR REVIEW
 -----------------------------------------------------------------------------------
