@@ -59,6 +59,7 @@ Select
 	,P2.SBQQ__ChargeType__c
 	,PBE.UnitPrice as UnitPrice
 	,POpt.[SBQQ__ConfiguredSKU__c] as SBQQ__BundleRoot__c
+	,P2.SBQQ__SubscriptionTerm__c as SBQQ__DefaultSubscriptionTerm__c
 
 	,Sub.[CreatedById]
     ,COALESCE(Sub.[CurrencyIsoCode], QL.[CurrencyIsoCode]) AS [CurrencyIsoCode]
