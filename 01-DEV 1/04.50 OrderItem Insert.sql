@@ -71,9 +71,9 @@ top 500
 
 	,QL.SBQQ__DefaultSubscriptionTerm__c
 	,COALESCE(sub.[SBQQ__Quantity__c], QL.SBQQ__Quantity__c )  as SBQQ__QuotedQuantity__c
-	,QL.SBQQ__PricebookEntryId__c AS PricebookEntryId
+	,QL.SBQQ__PricebookEntryId__c AS PricebookEntryId -- There is a pricebook mismatch between the Quote and the Contract parent of this subscription.
 
-	,QL.SBQQ__Description__c as [Description]
+	--,QL.SBQQ__Description__c as [Description] -- Quote line's description is nvarchar(max) and we only have 255 in the standard description field
 	,COALESCE(Sub.SBQQ__Dimension__c, QL.SBQQ__Dimension__c) as SBQQ__PriceDimension__c
 	,COALESCE(Sub.SBQQ__DiscountSchedule__c , QL.SBQQ__DiscountSchedule__c ) as SBQQ__DiscountSchedule__c
 	,COALESCE(Sub.SBQQ__EndDate__c, QL.[SBQQ__EndDate__c]) as EndDate
@@ -277,7 +277,10 @@ EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(5)','SANDBOX_QA','Orde
 ---------------------------------------------------------------------------------
 
 -- USE Insert_Database_Name_Here; Select error, * from OrderItem_Load_Result a where error not like '%success%'
-Select error, count(*) from OrderItem_Load_Result a where error not like '%success%'
+Select error, count(*) from StageQA.dbo.OrderItem_Load_Result a where error not like '%success%'
 group by error
 
 -- USE Insert_Database_Name_Here; EXEC SF_Tableloader 'HardDelete:batchsize(10)', 'SANDBOX_QA', 'SBQQ__QuoteLine__c_Load_Result'
+
+
+EXEC StageQA.dbo.SF_Tableloader 'DELETE','SANDBOX_QA','OrderItem_Load_result'
