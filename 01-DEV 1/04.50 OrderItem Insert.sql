@@ -41,11 +41,12 @@ DROP TABLE StageQA.dbo.OrderItem_Load
 ---------------------------------------------------------------------------------
 
 Select
+top 500
 	CAST('' AS nvarchar(18)) AS [ID]
 	,CAST('' as nvarchar(2000)) as Error
 
 -- MIGRATION FIELDS 																						
-	,Sub.ID as OI_Migration_id__c
+	,Sub.ID as Order_Item_Migration_id__c
 	
 
 --Quote Line to Order Product mappings
@@ -58,8 +59,9 @@ Select
 	,QL.SBQQ__BlockPrice__c
 	,P2.SBQQ__ChargeType__c
 	,PBE.UnitPrice as UnitPrice
-	,POpt.[SBQQ__ConfiguredSKU__c] as SBQQ__BundleRoot__c
-	,P2.SBQQ__SubscriptionTerm__c as SBQQ__DefaultSubscriptionTerm__c
+	,PBE.UnitPrice as ListPrice
+-- 	,POpt.[SBQQ__ConfiguredSKU__c] as SBQQ__BundleRoot__c -- needs to be updated after sucessful load
+-- 	,P2.SBQQ__SubscriptionTerm__c as SBQQ__DefaultSubscriptionTerm__c
 
 	,Sub.[CreatedById]
     ,COALESCE(Sub.[CurrencyIsoCode], QL.[CurrencyIsoCode]) AS [CurrencyIsoCode]
@@ -68,29 +70,29 @@ Select
 ,Sub.[SBQQ__DimensionType__c]
 
 	,QL.SBQQ__DefaultSubscriptionTerm__c
+	,COALESCE(sub.[SBQQ__Quantity__c], QL.SBQQ__Quantity__c )  as SBQQ__QuotedQuantity__c
+	,QL.SBQQ__PricebookEntryId__c AS PricebookEntryId
+
 	,QL.SBQQ__Description__c as [Description]
 	,COALESCE(Sub.SBQQ__Dimension__c, QL.SBQQ__Dimension__c) as SBQQ__PriceDimension__c
 	,COALESCE(Sub.SBQQ__DiscountSchedule__c , QL.SBQQ__DiscountSchedule__c ) as SBQQ__DiscountSchedule__c
 	,COALESCE(Sub.SBQQ__EndDate__c, QL.[SBQQ__EndDate__c]) as EndDate
-	,COALESCE(Sub.[SBQQ__ListPrice__c], QL.SBQQ__ListPrice__c) AS ListPrice
+	-- ,COALESCE(Sub.[SBQQ__ListPrice__c], QL.SBQQ__ListPrice__c) AS ListPrice -- An Order Product must have the same List Price as the related Price Book Entry
 	,QL.SBQQ__ListPrice__c as SBQQ__QuotedListPrice__c
 	,COALESCE(sub.[SBQQ__Quantity__c], QL.SBQQ__Quantity__c )  as SBQQ__OrderedQuantity__c
 	,COALESCE(sub.[SBQQ__Quantity__c], QL.SBQQ__Quantity__c ) as Quantity
-	,COALESCE(sub.[SBQQ__Quantity__c], QL.SBQQ__Quantity__c )  as SBQQ__QuotedQuantity__c
-	,QL.SBQQ__PricebookEntryId__c AS PricebookEntryId
-
 	,COALESCE(Sub.SBQQ__PricingMethod__c, QL.SBQQ__PricingMethod__c) AS SBQQ__PricingMethod__c
 	,COALESCE(Sub.SBQQ__ProductSubscriptionType__c, QL.SBQQ__ProductSubscriptionType__c) AS SBQQ__ProductSubscriptionType__c
 	,COALESCE(Sub.SBQQ__ProductOption__c ,QL.SBQQ__ProductOption__c ) as SBQQ__ProductOption__c
 
 	,COALESCE(Sub.SBQQ__ProrateMultiplier__c, QL.SBQQ__ProrateMultiplier__c) AS SBQQ__ProrateMultiplier__c
-	,QL.SBQQ__RequiredBy__c
+-- 	,QL.SBQQ__RequiredBy__c
 	,COALESCE(Sub.SBQQ__SegmentIndex__c, QL.SBQQ__SegmentIndex__c ) as SBQQ__SegmentIndex__c
 	,Sub.SBQQ__SegmentKey__c
 	,Sub.SBQQ__SegmentLabel__c
 	,COALESCE(Sub.SBQQ__SubscriptionPricing__c, QL.SBQQ__SubscriptionPricing__c) AS SBQQ__SubscriptionPricing__c
 	,COALESCE(Sub.[SBQQ__StartDate__c], QL.SBQQ__StartDate__c ) as ServiceDate
-	,COALESE(QL.SBQQ__SubscriptionTerm__c, Inv.Subscription_Term__c) AS SBQQ__SubscriptionTerm__c
+	,COALESCE(QL.SBQQ__SubscriptionTerm__c, Inv.Subscription_Term__c) AS SBQQ__SubscriptionTerm__c
 	,COALESCE(Sub.SBQQ__SubscriptionType__c, QL.SBQQ__SubscriptionType__c) AS SBQQ__SubscriptionType__c
 	,QL.SBQQ__TaxCode__c
 	,COALESCE(Sub.SBQQ__TermDiscountSchedule__c, QL.SBQQ__TermDiscountSchedule__c) AS SBQQ__TermDiscountSchedule__c
@@ -102,13 +104,13 @@ Select
 
 --Subscription
 	,SUB.ID as SBQQ__Subscription__c
-	,SUB.SBQQ__RequiredByProduct__c as SBQQ__RequiredBy__c
+-- 	,SUB.SBQQ__RequiredByProduct__c as SBQQ__RequiredBy__c -- line is related to orderproduct and needs to be updated after successful load
 	,SUB.SBQQ__TerminatedDate__c as SBQQ__TerminatedDate__c
 	,SUB.OwnerId 
 
 -- Contract
 	,Con.ID as SBQQ__Contract__c
-	,'true' as 	SBQQ__Contracted__c
+	,'false' as 	SBQQ__Contracted__c
 
 	,ORD.ID as OrderId
 
@@ -219,16 +221,15 @@ Select
 	,Inv.Workday_Invoice_Id__c
 
 
---INTO StageQA.dbo.OrderItem_Load
+INTO StageQA.dbo.OrderItem_Load
 
 FROM SourceQA.dbo.SBQQ__Subscription__c Sub
 Inner join SourceQA.dbo.Product2 P2
 	on Sub.[SBQQ__Product__c] = P2.ID
-left join SourceQA.dbo.SBQQ__ProductOption__c Popt
-	on COALESCE(Sub.SBQQ__ProductOption__c ,QL.SBQQ__ProductOption__c ) = Popt.ID
-
 left join SourceQA.dbo.SBQQ__QuoteLine__c QL
 	on QL.ID = Sub.SBQQ__QuoteLine__c
+left join SourceQA.dbo.SBQQ__ProductOption__c Popt
+	on COALESCE(Sub.SBQQ__ProductOption__c ,QL.SBQQ__ProductOption__c ) = Popt.ID
 inner join SourceQA.dbo.[Contract] Con
 	on Sub.SBQQ__Contract__c = Con.ID
 LEFT JOIN SourceQA.dbo.[Order]  Ord  
@@ -249,14 +250,26 @@ and Con.Status = 'Activated'
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
 ---------------------------------------------------------------------------------
-ALTER TABLE OrderItem_Load
-ADD [Sort] int IDENTITY (1,1)
+ALTER TABLE StageQA.dbo.[orderitem_load]
+ADD [Sort] int 
+GO
+WITH NumberedRows AS (
+  SELECT *, ROW_NUMBER() OVER (ORDER BY OrderId) AS OrderRowNumber
+  FROM StageQA.dbo.[orderitem_load]
+)
+UPDATE NumberedRows
+SET [Sort] = OrderRowNumber;
+
+---------------------------------------------------------------------------------
+-- Data Validation
+---------------------------------------------------------------------------------
+select count(*), COUNT(distinct Order_Item_Migration_id__c) from OrderItem_Load
 
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 USE StageQA;
-EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi, batchsize(5)', 'SANDBOX_QA', 'OrderItem_Load'
+EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(5)','SANDBOX_QA','OrderItem_Load'
 
 
 ---------------------------------------------------------------------------------
@@ -264,6 +277,7 @@ EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi, batchsize(5)', 'SANDBOX_QA', 'O
 ---------------------------------------------------------------------------------
 
 -- USE Insert_Database_Name_Here; Select error, * from OrderItem_Load_Result a where error not like '%success%'
-
+Select error, count(*) from OrderItem_Load_Result a where error not like '%success%'
+group by error
 
 -- USE Insert_Database_Name_Here; EXEC SF_Tableloader 'HardDelete:batchsize(10)', 'SANDBOX_QA', 'SBQQ__QuoteLine__c_Load_Result'

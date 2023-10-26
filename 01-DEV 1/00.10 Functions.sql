@@ -27,7 +27,7 @@ BEGIN
     RETURN @MappedCountry
 END
 
-
+GO
 -- Function to turn state abreviations into their full names
 
 IF OBJECT_ID('dbo.fn_GetStateFullName', 'FN') IS NOT NULL
@@ -37,8 +37,8 @@ END
 
 GO
 
-CREATE FUNCTION dbo.fn_GetStateFullName (@StateAbbreviation CHAR(2))
-RETURNS NVARCHAR(100)
+CREATE FUNCTION dbo.fn_GetStateFullName (@StateAbbreviation VARCHAR(255))
+RETURNS NVARCHAR(255)
 AS
 BEGIN
     RETURN 
@@ -95,5 +95,27 @@ BEGIN
             WHEN 'WY' THEN 'Wyoming'
             ELSE @StateAbbreviation
         END
-END;
+END
+
+GO
+
+
+-- function to combine the top two functions to scrub messy values and convert state full anmes
+IF OBJECT_ID('dbo.scrub_address', 'FN') IS NOT NULL
+BEGIN
+    DROP FUNCTION dbo.scrub_address;
+END
+
+GO
+
+CREATE FUNCTION scrub_address (@input NVARCHAR(255))
+RETURNS NVARCHAR(255)
+AS
+BEGIN
+    -- Call the first two functions in sequence
+    DECLARE @temp NVARCHAR(255) = dbo.MapBillingCountry(@input)
+    SET @temp = dbo.fn_GetStateFullName(@temp)
+    RETURN @temp
+END
+
 GO

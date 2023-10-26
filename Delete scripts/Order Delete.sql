@@ -30,8 +30,8 @@ Select
 
 into StageQA.dbo.Order_DELETE
 from  SourceQA.dbo.[Order]
-where CreatedById = ''
-and Order_Migration_id__c not like ''
+--where CreatedById = ''
+--and Order_Migration_id__c not like ''
 order by  id
 
 
