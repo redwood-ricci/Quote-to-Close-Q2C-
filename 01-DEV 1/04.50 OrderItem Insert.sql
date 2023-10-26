@@ -27,7 +27,7 @@ EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'SBQQ__QuoteLine__c','PKCHUNK'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'SBQQ__Subscription__c','PKCHUNK'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Contract' ,'PKCHUNK'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'OrderItem','PKCHUNK'
-
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'SBQQ__ProductOption__c','PKCHUNK'
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
@@ -46,6 +46,7 @@ Select
 
 -- MIGRATION FIELDS 																						
 	,Sub.ID as OI_Migration_id__c
+	
 
 --Quote Line to Order Product mappings
 	,QL.ID as SBQQ__QuoteLine__c
@@ -57,7 +58,7 @@ Select
 	,QL.SBQQ__BlockPrice__c
 	,P2.SBQQ__ChargeType__c
 	,PBE.UnitPrice as UnitPrice
-
+	,POpt.[SBQQ__ConfiguredSKU__c] as SBQQ__BundleRoot__c
 
 	,Sub.[CreatedById]
     ,COALESCE(Sub.[CurrencyIsoCode], QL.[CurrencyIsoCode]) AS [CurrencyIsoCode]
@@ -112,6 +113,10 @@ Select
 
 	,'New' as SBQQ__ContractAction__c
 	,'Draft' as SBQQ__Status__c
+
+--TWIN FIELDS
+
+	/* ADD BASED ON BUILD AND ADD THEM HERE These will likely be on Quote Lines and Subscriptions. APIs of fields have to align If they build these on OrderItem the source will be one of those*/
 
 /********************************************************************/
 /* INVOICE FIELDS													*/
@@ -218,6 +223,8 @@ Select
 FROM SourceQA.dbo.SBQQ__Subscription__c Sub
 Inner join SourceQA.dbo.Product2 P2
 	on Sub.[SBQQ__Product__c] = P2.ID
+left join SourceQA.dbo.SBQQ__ProductOption__c Popt
+	on COALESCE(Sub.SBQQ__ProductOption__c ,QL.SBQQ__ProductOption__c ) = Popt.ID
 
 left join SourceQA.dbo.SBQQ__QuoteLine__c QL
 	on QL.ID = Sub.SBQQ__QuoteLine__c

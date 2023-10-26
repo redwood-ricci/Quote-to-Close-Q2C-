@@ -52,6 +52,13 @@ Select  DISTINCT
 --	,'True' as SBQQ__Contracted__c
 	,'Single Contract' as SBQQ__ContractingMethod__c --Picklist Single Contract or By Subscription End Date --"By Subscription End Date" creates a separate Contract for each unique Subscription End Date, containing only those Subscriptions. "Single Contract" creates one Contract containing all Subscriptions, regardless of their End Dates.
 	,'Draft' as [Status]
+	--,'New' as Type -- Valid options are New, Renewal and Re-Quote as picklist values. None are active in the QA sandbox. If build activates this, the first one created from a quote would be new. If it is a renewal quote, it owould be Renewal
+
+--TWIN FIELDS
+	,Con.Annual_Increase_Cap_Percentage__c
+	,Con.Annual_Increase_Cap_Term__c
+	/* ADD OTHERS BASED ON BUILD AND ADD THEM HERE*/
+
 
 -- ADDRESSES
 	,dbo.scrub_address(Coalesce(Qte.SBQQ__BillingStreet__c	,Con.[BillingStreet]		)) as BillingStreet
