@@ -12,7 +12,7 @@
 ---------------------------------------------------------------------------------------------------------
 USE SourceQA;
 
-EXEC [SourceQA].dbo.SF_Replicate 'SANDBOX_QA' ,'OrderItem' ,'pkchunk'
+EXEC [SourceQA].dbo.SF_Replicate 'SANDBOX_QA','OrderItem','pkchunk'
 
 ---------------------------------------------------------------------------------
 --- Drop Staging Table
@@ -32,7 +32,7 @@ into StageQA.dbo.OrderItem_DELETE
 from  SourceQA.dbo.[OrderItem]
 --where CreatedById = ''
 --and Order_Item_Migration_id__c not like ''
-OrderItem by  id
+Order by  id
 
 
 ALTER TABLE StageQA.dbo.OrderItem_DELETE
@@ -43,7 +43,7 @@ ADD [Sort] int IDENTITY (1,1)
 ---------------------------------------------------------------------------------
 -- DELETE  -- 
 ---------------------------------------------------------------------------------
-EXEC SF_TableLoader 'Delete','[SANDBOX_QA]','OrderItem_DELETE'
+EXEC StageQA.dbo.SF_TableLoader 'Delete','SANDBOX_QA','OrderItem_DELETE'
 
 select * 
 --into StageQA.dbo.OrderItem_DELETE2

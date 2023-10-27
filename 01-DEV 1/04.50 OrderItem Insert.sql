@@ -11,7 +11,7 @@
 --- 1. 
 ---------------------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------------
-
+-- 10/27 Loaded in 01:13 with
 ---------------------------------------------------------------------------------
 -- Replicate Data
 ---------------------------------------------------------------------------------
@@ -40,8 +40,7 @@ DROP TABLE StageQA.dbo.OrderItem_Load
 -- Create Staging Table
 ---------------------------------------------------------------------------------
 
-Select
-top 500
+Select top 2000
 	CAST('' AS nvarchar(18)) AS [ID]
 	,CAST('' as nvarchar(2000)) as Error
 
@@ -232,7 +231,7 @@ left join SourceQA.dbo.SBQQ__ProductOption__c Popt
 	on COALESCE(Sub.SBQQ__ProductOption__c ,QL.SBQQ__ProductOption__c ) = Popt.ID
 inner join SourceQA.dbo.[Contract] Con
 	on Sub.SBQQ__Contract__c = Con.ID
-LEFT JOIN SourceQA.dbo.[Order]  Ord  
+Inner JOIN SourceQA.dbo.[Order]  Ord  -- Must have an order
 	on Ord.ContractId = Con.ID
 
 left join SourceQA.dbo.Invoice__c Inv
@@ -284,3 +283,8 @@ group by error
 
 
 EXEC StageQA.dbo.SF_Tableloader 'DELETE','SANDBOX_QA','OrderItem_Load_result'
+
+
+select * 
+
+from StageQA.dbo.OrderItem_Load_Result_result where error not like '%success%'
