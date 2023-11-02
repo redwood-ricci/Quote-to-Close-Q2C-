@@ -83,13 +83,13 @@ Select  DISTINCT
 	,Con.CurrencyIsoCode as CurrencyIsoCode
 	--,Inv.CurrencyIsoCode -- this should match the one on the quote?
 
-	,Coalesce(Con.[StartDate],Qte.SBQQ__StartDate__c )as EffectiveDate
-	,Coalesce(Con.[EndDate],Qte.SBQQ__EndDate__c )as EndDate
+	,Coalesce(Qte.SBQQ__StartDate__c, Con.[StartDate])as EffectiveDate
+	,Coalesce(Con.[EndDate],Qte.SBQQ__EndDate__c)as EndDate
 	,Con.OwnerId 
 	--,Inv.OwnerId as OwnerId -- Are invoice owners the same as the quote owner or ContractOwner?
-	,Coalesce(Qte.SBQQ__PaymentTerms__c,'Net 30') as SBQQ__PaymentTerm__c --Net 30 is the default value on the order object for this.
-	,Coalesce(Con.SBQQ__RenewalTerm__c,Qte.SBQQ__RenewalTerm__c )as SBQQ__RenewalTerm__c
-	,Coalesce(Con.SBQQ__RenewalUpliftRate__c ,Qte.SBQQ__RenewalUpliftRate__c ) as SBQQ__RenewalUpliftRate__c
+	,Coalesce(Qte.SBQQ__PaymentTerms__c,'Net 30') as SBQQ__PaymentTerm__c -- Net 30 is the default value on the order object for this.
+	,Coalesce(Con.SBQQ__RenewalTerm__c,Qte.SBQQ__RenewalTerm__c)as SBQQ__RenewalTerm__c
+	,Coalesce(Con.SBQQ__RenewalUpliftRate__c ,Qte.SBQQ__RenewalUpliftRate__c) as SBQQ__RenewalUpliftRate__c
 
 -- MIGRATION FIELDS 																						
 	,Con.ID  as Order_Migration_id__c -- needs created on each object. Each object's field should be unique with the object name and migration_id__c at the end to avoid twin field issues. Field should be text, set to unique and external
@@ -195,6 +195,7 @@ EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','SANDBOX_QA','Ord
 ---------------------------------------------------------------------------------
 -- quote a363t000002h7SqAAI and opportunity are in different currencies. The quote has the correct values
 Select error, count(*) as num from Order_Load_Result
+-- Select * from Order_Load_Result
 -- Select error, * from Order_Load_Result a where error not like '%success%'
 Select error, count(*) as num from Order_Load_Result a
 where error not like '%success%'

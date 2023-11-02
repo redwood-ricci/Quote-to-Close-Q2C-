@@ -40,7 +40,8 @@ DROP TABLE StageQA.dbo.OrderItem_Load
 -- Create Staging Table
 ---------------------------------------------------------------------------------
 
-Select 
+Select
+	top 500
 	CAST('' AS nvarchar(18)) AS [ID]
 	,CAST('' as nvarchar(2000)) as Error
 
@@ -70,8 +71,7 @@ Select
 
 	,QL.SBQQ__DefaultSubscriptionTerm__c
 	,COALESCE(sub.[SBQQ__Quantity__c], QL.SBQQ__Quantity__c )  as SBQQ__QuotedQuantity__c
-	,QL.SBQQ__PricebookEntryId__c AS PricebookEntryId -- There is a pricebook mismatch between the Quote and the Contract parent of this subscription.
-	-- There needs to be some coding here to get the Pricebook. There is no quote. 
+	,COALESCE(QL.SBQQ__PricebookEntryId__c,Con.) AS PricebookEntryId -- There is a pricebook mismatch between the Quote and the Contract parent of this subscription.
 
 	--,QL.SBQQ__Description__c as [Description] -- Quote line's description is nvarchar(max) and we only have 255 in the standard description field
 	,COALESCE(Sub.SBQQ__Dimension__c, QL.SBQQ__Dimension__c) as SBQQ__PriceDimension__c
@@ -220,6 +220,7 @@ Select
 	,Inv.Workday_Contract_Number__c
 	,Inv.Workday_Invoice_Id__c
 
+
 INTO StageQA.dbo.OrderItem_Load
 
 FROM SourceQA.dbo.SBQQ__Subscription__c Sub
@@ -242,7 +243,6 @@ left join SourceQA.dbo.[PriceBookEntry] PBE
 
 Where Con.EndDate >= getdate()
 and Con.Status = 'Activated'
-and Con.ID = '8003t000008aTdTAAU' -- Test record with 31 lines of subcriptions to test bundles
 
 
 
@@ -264,13 +264,7 @@ SET [Sort] = OrderRowNumber;
 -- Data Validation
 ---------------------------------------------------------------------------------
 select count(*), COUNT(distinct Order_Item_Migration_id__c) from OrderItem_Load
-select Order_Item_Migration_id__c, count(*)
- from OrderItem_Load
- group by Order_Item_Migration_id__c
- having count(*) > 1
 
-
- select * from OrderItem_Load
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
@@ -286,10 +280,8 @@ EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(5)','SANDBOX_QA','Orde
 Select error, count(*) from StageQA.dbo.OrderItem_Load_Result a where error not like '%success%'
 group by error
 
-
-
 -- USE Insert_Database_Name_Here; EXEC SF_Tableloader 'HardDelete:batchsize(10)', 'SANDBOX_QA', 'SBQQ__QuoteLine__c_Load_Result'
-
+select * from StageQA.dbo.OrderItem_Load_Result
 
 EXEC StageQA.dbo.SF_Tableloader 'DELETE','SANDBOX_QA','OrderItem_Load_result'
 
