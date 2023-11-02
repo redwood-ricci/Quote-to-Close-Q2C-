@@ -82,8 +82,8 @@ Select  DISTINCT
 	-- do we want the createddate to match the contract or quote?
 	,Con.CurrencyIsoCode as CurrencyIsoCode
 	--,Inv.CurrencyIsoCode -- this should match the one on the quote?
-
-	,Coalesce(Qte.SBQQ__StartDate__c, Con.[StartDate])as EffectiveDate
+	
+	,case when Qte.SBQQ__Type__c = 'Amendment' and Qte.SBQQ__StartDate__c is not null then Qte.SBQQ__StartDate__c else Con.[StartDate] end as EffectiveDate
 	,Coalesce(Con.[EndDate],Qte.SBQQ__EndDate__c)as EndDate
 	,Con.OwnerId 
 	--,Inv.OwnerId as OwnerId -- Are invoice owners the same as the quote owner or ContractOwner?
