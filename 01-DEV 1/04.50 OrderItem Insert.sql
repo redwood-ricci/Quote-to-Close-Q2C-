@@ -15,23 +15,29 @@
 ---------------------------------------------------------------------------------
 -- Replicate Data
 ---------------------------------------------------------------------------------
-USE SourceQA;
+	USE SourceQA;
 
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Order','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Product2','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'PriceBook2','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'PriceBookEntry','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Opportunity','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'OpportunityLineItem','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'SBQQ__QuoteLine__c','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'SBQQ__Subscription__c','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Contract' ,'PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'OrderItem','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'SBQQ__ProductOption__c','PKCHUNK'
----------------------------------------------------------------------------------
--- Drop Staging Table
----------------------------------------------------------------------------------
-USE StageQA;
+	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Order','PKCHUNK'
+	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Product2','PKCHUNK'
+	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'PriceBook2','PKCHUNK'
+	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'PriceBookEntry','PKCHUNK'
+	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Opportunity','PKCHUNK'
+	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'OpportunityLineItem','PKCHUNK'
+	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'SBQQ__QuoteLine__c','PKCHUNK'
+	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'SBQQ__Subscription__c','PKCHUNK'
+	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Contract' ,'PKCHUNK'
+	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'OrderItem','PKCHUNK'
+	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'SBQQ__ProductOption__c','PKCHUNK'
+	---------------------------------------------------------------------------------
+	-- some data checks
+	---------------------------------------------------------------------------------
+	-- select * FROM SourceQA.dbo.[Order]
+	-- select * FROM SourceQA.dbo.[OrderItem]
+	-- select count(*) FROM SourceQA.dbo.[OrderItem]
+	---------------------------------------------------------------------------------
+	-- Drop Staging Table
+	---------------------------------------------------------------------------------
+	USE StageQA;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'OrderItem_Load' AND TABLE_SCHEMA = 'dbo')
 DROP TABLE StageQA.dbo.OrderItem_Load
@@ -41,7 +47,7 @@ DROP TABLE StageQA.dbo.OrderItem_Load
 ---------------------------------------------------------------------------------
 
 Select
-	top 500
+ top 2000
 	CAST('' AS nvarchar(18)) AS [ID]
 	,CAST('' as nvarchar(2000)) as Error
 
@@ -71,7 +77,7 @@ Select
 
 	,QL.SBQQ__DefaultSubscriptionTerm__c
 	,COALESCE(sub.[SBQQ__Quantity__c], QL.SBQQ__Quantity__c )  as SBQQ__QuotedQuantity__c
-	,COALESCE(QL.SBQQ__PricebookEntryId__c,Con.) AS PricebookEntryId -- There is a pricebook mismatch between the Quote and the Contract parent of this subscription.
+	,COALESCE(QL.SBQQ__PricebookEntryId__c,Con.PriceBook2__c,Con.PriceBook2Id,Con.SBQQ__OpportunityPricebookId__c) AS PricebookEntryId -- There is a pricebook mismatch between the Quote and the Contract parent of this subscription.
 
 	--,QL.SBQQ__Description__c as [Description] -- Quote line's description is nvarchar(max) and we only have 255 in the standard description field
 	,COALESCE(Sub.SBQQ__Dimension__c, QL.SBQQ__Dimension__c) as SBQQ__PriceDimension__c
@@ -244,7 +250,7 @@ left join SourceQA.dbo.[PriceBookEntry] PBE
 Where Con.EndDate >= getdate()
 and Con.Status = 'Activated'
 
-
+-- select * from SourceQA.dbo.[Order]
 
 
 ---------------------------------------------------------------------------------
@@ -264,12 +270,13 @@ SET [Sort] = OrderRowNumber;
 -- Data Validation
 ---------------------------------------------------------------------------------
 select count(*), COUNT(distinct Order_Item_Migration_id__c) from OrderItem_Load
+select * from StageQA.dbo.OrderItem_Load
 
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 USE StageQA;
-EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(5)','SANDBOX_QA','OrderItem_Load'
+EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(100)','SANDBOX_QA','OrderItem_Load'
 
 
 ---------------------------------------------------------------------------------
@@ -280,8 +287,9 @@ EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(5)','SANDBOX_QA','Orde
 Select error, count(*) from StageQA.dbo.OrderItem_Load_Result a where error not like '%success%'
 group by error
 
--- USE Insert_Database_Name_Here; EXEC SF_Tableloader 'HardDelete:batchsize(10)', 'SANDBOX_QA', 'SBQQ__QuoteLine__c_Load_Result'
+-- USE Insert_Database_Name_Here; EXEC SF_Tableloader 'HardDelete:batchsize(10)', 'SANDBOX_QA', 'SBQQ__QuoteL		ine__c_Load_Result'
 select * from StageQA.dbo.OrderItem_Load_Result
+select * from StageQA.dbo.OrderItem_Load
 
 EXEC StageQA.dbo.SF_Tableloader 'DELETE','SANDBOX_QA','OrderItem_Load_result'
 
