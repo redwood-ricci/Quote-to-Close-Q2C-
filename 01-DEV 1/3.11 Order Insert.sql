@@ -44,57 +44,56 @@ DROP TABLE StageQA.dbo.[Order_Load]
 Select
 	CAST('' AS nvarchar(18)) AS [ID]
 	,CAST('' as nvarchar(2000)) as Error
-	,Con.AccountId as AccountID
-	,Con.SBQQ__Opportunity__c as OpportunityId
-	,coalesce(Con.PriceBook2__c , Qte.SBQQ__Pricebook__c ) as Pricebook2Id -- STill some nulls. Do we need a default value to coalesce in if nothing is found?
-	,con.SBQQ__Quote__c as SBQQ__Quote__c
+	,MIN(Con.AccountId) as AccountID
+	,MIN(Con.SBQQ__Opportunity__c) as OpportunityId
+	,MIN(coalesce(Con.PriceBook2__c , Qte.SBQQ__Pricebook__c )) as Pricebook2Id -- STill some nulls. Do we need a default value to coalesce in if nothing is found?
+	,MIN(con.SBQQ__Quote__c) as SBQQ__Quote__c
 	,Con.ID as ContractId
 --	,'True' as SBQQ__Contracted__c
-	,'Single Contract' as SBQQ__ContractingMethod__c --Picklist Single Contract or By Subscription End Date --"By Subscription End Date" creates a separate Contract for each unique Subscription End Date, containing only those Subscriptions. "Single Contract" creates one Contract containing all Subscriptions, regardless of their End Dates.
-	,'Draft' as [Status]
+	,MIN('Single Contract') as SBQQ__ContractingMethod__c --Picklist Single Contract or By Subscription End Date --"By Subscription End Date" creates a separate Contract for each unique Subscription End Date, containing only those Subscriptions. "Single Contract" creates one Contract containing all Subscriptions, regardless of their End Dates.
+	,MIN('Draft') as [Status]
 	--,'New' as Type -- Valid options are New, Renewal and Re-Quote as picklist values. None are active in the QA sandbox. If build activates this, the first one created from a quote would be new. If it is a renewal quote, it owould be Renewal
 
 --SUBSCRIPTION FIEDS
-	,sub.SBQQ__Contract__c as SubContractId
 	,sub.SBQQ__StartDate__c as SubStartDate
 
 --TWIN FIELDS
-	,Con.Annual_Increase_Cap_Percentage__c
-	,Con.Annual_Increase_Cap_Term__c
+	,MIN(Con.Annual_Increase_Cap_Percentage__c)
+	,MIN(Con.Annual_Increase_Cap_Term__c)
 	/* ADD OTHERS BASED ON BUILD AND ADD THEM HERE*/
 
 
 -- ADDRESSES
-	,dbo.scrub_address(Coalesce(Qte.SBQQ__BillingStreet__c	,Con.[BillingStreet]		)) as BillingStreet
-	,dbo.scrub_address(Coalesce(Qte.SBQQ__BillingCity__c		,Con.[BillingCity]			)) as BillingCity
-	,dbo.scrub_address(Coalesce(Qte.SBQQ__BillingState__c		,Con.[BillingState]			)) as BillingState
-	,dbo.scrub_address(Coalesce(Qte.SBQQ__BillingPostalCode__c,Con.[BillingPostalCode]	)) as BillingPostalCode
-	,dbo.scrub_address(Coalesce(Qte.SBQQ__BillingCountry__c	,Con.[BillingCountry])) as BillingCountry
-	,Acct.BillingStreet as REF_AccountBillingStreet
-	,Acct.BillingCity as REF_AccountBillingCity
-	,Acct.BillingState as REF_AccountBillingState
-	,Acct.BillingPostalCode as REF_AccountBillingPostalCode
-	,Acct.BillingCountry as REF_AccountBillingCountry
+	,MIN(dbo.scrub_address(Coalesce(Qte.SBQQ__BillingStreet__c	,Con.[BillingStreet]		))) as BillingStreet
+	,MIN(dbo.scrub_address(Coalesce(Qte.SBQQ__BillingCity__c		,Con.[BillingCity]			))) as BillingCity
+	,MIN(dbo.scrub_address(Coalesce(Qte.SBQQ__BillingState__c		,Con.[BillingState]			))) as BillingState
+	,MIN(dbo.scrub_address(Coalesce(Qte.SBQQ__BillingPostalCode__c,Con.[BillingPostalCode]	))) as BillingPostalCode
+	,MIN(dbo.scrub_address(Coalesce(Qte.SBQQ__BillingCountry__c	,Con.[BillingCountry]))) as BillingCountry
+	,MIN(Acct.BillingStreet) as REF_AccountBillingStreet
+	,MIN(Acct.BillingCity) as REF_AccountBillingCity
+	,MIN(Acct.BillingState) as REF_AccountBillingState
+	,MIN(Acct.BillingPostalCode) as REF_AccountBillingPostalCode
+	,MIN(Acct.BillingCountry) as REF_AccountBillingCountry
 
-	,dbo.scrub_address(Coalesce(Qte.SBQQ__ShippingStreet__c		,Con.[ShippingStreet]		)) as [ShippingStreet]
-	,dbo.scrub_address(Coalesce(Qte.SBQQ__ShippingCity__c			,Con.[ShippingCity]		)	) as [ShippingCity]
-	,dbo.scrub_address(Coalesce(Qte.SBQQ__ShippingState__c		,Con.[ShippingState]		)) as [ShippingState]
-	,dbo.scrub_address(Coalesce(Qte.SBQQ__ShippingPostalCode__c	,Con.[ShippingPostalCode])) as [ShippingPostalCode]
-	,dbo.scrub_address(Coalesce(Qte.SBQQ__ShippingCountry__c 		,Con.[ShippingCountry])	) as [ShippingCountry]
+	,dbo.scrub_address(MIN(Coalesce(Qte.SBQQ__ShippingStreet__c		,Con.[ShippingStreet]		))) as [ShippingStreet]
+	,dbo.scrub_address(MIN(Coalesce(Qte.SBQQ__ShippingCity__c			,Con.[ShippingCity]		))	) as [ShippingCity]
+	,dbo.scrub_address(MIN(Coalesce(Qte.SBQQ__ShippingState__c		,Con.[ShippingState]		))) as [ShippingState]
+	,dbo.scrub_address(MIN(Coalesce(Qte.SBQQ__ShippingPostalCode__c	,Con.[ShippingPostalCode]))) as [ShippingPostalCode]
+	,dbo.scrub_address(MIN(Coalesce(Qte.SBQQ__ShippingCountry__c 		,Con.[ShippingCountry]))	) as [ShippingCountry]
 
-	,Con.CreatedById as CreatedById -- Requires a permission set to allow migration user to touch audit fields --https://help.salesforce.com/s/articleView?id=000386875&language=en_US&type=1
+	,MIN(Con.CreatedById) as CreatedById -- Requires a permission set to allow migration user to touch audit fields --https://help.salesforce.com/s/articleView?id=000386875&language=en_US&type=1
 	-- do we want the createddate to match the contract or quote?
 	,Con.CurrencyIsoCode as CurrencyIsoCode
 	--,Inv.CurrencyIsoCode -- this should match the one on the quote?
 	
 	--,case when Qte.SBQQ__Type__c = 'Amendment' and Qte.SBQQ__StartDate__c is not null then Qte.SBQQ__StartDate__c else Con.[StartDate] end as EffectiveDate
-	,Coalesce(sub.SBQQ__StartDate__c, Con.[StartDate]) as EffectiveDate
-	,Coalesce(Con.[EndDate],Qte.SBQQ__EndDate__c)as EndDate
+	,MIN(Coalesce(sub.SBQQ__StartDate__c, Con.[StartDate])) as EffectiveDate
+	,MIN(Coalesce(Con.[EndDate],Qte.SBQQ__EndDate__c)) as EndDate
 	,Con.OwnerId 
 	--,Inv.OwnerId as OwnerId -- Are invoice owners the same as the quote owner or ContractOwner?
-	,Coalesce(Qte.SBQQ__PaymentTerms__c,'Net 30') as SBQQ__PaymentTerm__c -- Net 30 is the default value on the order object for this.
-	,Coalesce(Con.SBQQ__RenewalTerm__c,Qte.SBQQ__RenewalTerm__c)as SBQQ__RenewalTerm__c
-	,Coalesce(Con.SBQQ__RenewalUpliftRate__c ,Qte.SBQQ__RenewalUpliftRate__c) as SBQQ__RenewalUpliftRate__c
+	,MIN(Coalesce(Qte.SBQQ__PaymentTerms__c,'Net 30')) as SBQQ__PaymentTerm__c -- Net 30 is the default value on the order object for this.
+	,MIN(Coalesce(Con.SBQQ__RenewalTerm__c,Qte.SBQQ__RenewalTerm__c)) as SBQQ__RenewalTerm__c
+	,MIN(Coalesce(Con.SBQQ__RenewalUpliftRate__c ,Qte.SBQQ__RenewalUpliftRate__c)) as SBQQ__RenewalUpliftRate__c
 
 -- MIGRATION FIELDS 																						
 	,Con.ID  as Order_Migration_id__c -- needs created on each object. Each object's field should be unique with the object name and migration_id__c at the end to avoid twin field issues. Field should be text, set to unique and external
@@ -115,8 +114,9 @@ Where EndDate >= getdate()
 and Status = 'Activated'
 and Acct.Test_Account__c = 'false'
 
-group by Sub.SBQQ__Contract__c, 
+group by Con.ID, 
 		Sub.SBQQ__StartDate__c
+
 
 --Con.ID = '8003t000008D4Z8AAK' --'8003t000008aU32AAE' --Aj '8003t000007wDd9AAE'
 -- only things that can amend and renew
