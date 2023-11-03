@@ -58,8 +58,8 @@ Select
 	,sub.SBQQ__StartDate__c as SubStartDate
 
 --TWIN FIELDS
-	,MIN(Con.Annual_Increase_Cap_Percentage__c)
-	,MIN(Con.Annual_Increase_Cap_Term__c)
+	,MIN(Con.Annual_Increase_Cap_Percentage__c)  as Annual_Increase_Cap_Percentage__c
+	,MIN(Con.Annual_Increase_Cap_Term__c) as Annual_Increase_Cap_Term__c
 	/* ADD OTHERS BASED ON BUILD AND ADD THEM HERE*/
 
 
@@ -83,20 +83,20 @@ Select
 
 	,MIN(Con.CreatedById) as CreatedById -- Requires a permission set to allow migration user to touch audit fields --https://help.salesforce.com/s/articleView?id=000386875&language=en_US&type=1
 	-- do we want the createddate to match the contract or quote?
-	,Con.CurrencyIsoCode as CurrencyIsoCode
+	,MIN(Con.CurrencyIsoCode) as CurrencyIsoCode
 	--,Inv.CurrencyIsoCode -- this should match the one on the quote?
 	
 	--,case when Qte.SBQQ__Type__c = 'Amendment' and Qte.SBQQ__StartDate__c is not null then Qte.SBQQ__StartDate__c else Con.[StartDate] end as EffectiveDate
 	,MIN(Coalesce(sub.SBQQ__StartDate__c, Con.[StartDate])) as EffectiveDate
 	,MIN(Coalesce(Con.[EndDate],Qte.SBQQ__EndDate__c)) as EndDate
-	,Con.OwnerId 
+	,MIN(Con.OwnerId) as OwnerId
 	--,Inv.OwnerId as OwnerId -- Are invoice owners the same as the quote owner or ContractOwner?
 	,MIN(Coalesce(Qte.SBQQ__PaymentTerms__c,'Net 30')) as SBQQ__PaymentTerm__c -- Net 30 is the default value on the order object for this.
 	,MIN(Coalesce(Con.SBQQ__RenewalTerm__c,Qte.SBQQ__RenewalTerm__c)) as SBQQ__RenewalTerm__c
 	,MIN(Coalesce(Con.SBQQ__RenewalUpliftRate__c ,Qte.SBQQ__RenewalUpliftRate__c)) as SBQQ__RenewalUpliftRate__c
 
 -- MIGRATION FIELDS 																						
-	,Con.ID  as Order_Migration_id__c -- needs created on each object. Each object's field should be unique with the object name and migration_id__c at the end to avoid twin field issues. Field should be text, set to unique and external
+	,concat(MIN(Con.ID),' - ',MIN(Sub.Id))  as Order_Migration_id__c -- needs created on each object. Each object's field should be unique with the object name and migration_id__c at the end to avoid twin field issues. Field should be text, set to unique and external
 
 into StageQA.dbo.[Order_Load]
 

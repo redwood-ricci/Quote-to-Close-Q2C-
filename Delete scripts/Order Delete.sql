@@ -49,7 +49,7 @@ select *
 --into StageQA.dbo.Order_DELETE2
 from StageQA.dbo.Order_DELETE_Result
 where error not like '%Success%'
-and error  <> 'UNDELETE_FAILED: Entity is not in the recycle bin'
+-- and error  <> 'UNDELETE_FAILED: Entity is not in the recycle bin'
 
 --EXEC SF_TableLoader 'Delete:batchsize(1)','[SANDBOX_QA]','Order_DELETE2'
 
@@ -65,3 +65,4 @@ and error  <> 'UNDELETE_FAILED: Entity is not in the recycle bin'
 
 
 --EXEC SF_TableLoader 'UnDelete:batchsize(25)','[SANDBOX_QA]','Order_Undelete'
+
