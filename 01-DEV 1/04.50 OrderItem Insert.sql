@@ -47,7 +47,7 @@ DROP TABLE StageQA.dbo.OrderItem_Load
 ---------------------------------------------------------------------------------
 
 Select
- top 2000
+-- top 10000
 	CAST('' AS nvarchar(18)) AS [ID]
 	,CAST('' as nvarchar(2000)) as Error
 
@@ -64,11 +64,11 @@ Select
 	,P2.SBQQ__BillingType__c 
 	,QL.SBQQ__BlockPrice__c
 	,P2.SBQQ__ChargeType__c
-	,PBE.UnitPrice as UnitPrice
+--	,PBE.UnitPrice as UnitPrice
 	,PBE.UnitPrice as ListPrice
 -- 	,POpt.[SBQQ__ConfiguredSKU__c] as SBQQ__BundleRoot__c -- needs to be updated after sucessful load
 -- 	,P2.SBQQ__SubscriptionTerm__c as SBQQ__DefaultSubscriptionTerm__c
-
+	,PBE.Id as PBEntryId
 	,Sub.[CreatedById]
     ,COALESCE(Sub.[CurrencyIsoCode], QL.[CurrencyIsoCode]) AS [CurrencyIsoCode]
 
@@ -76,8 +76,8 @@ Select
 ,Sub.[SBQQ__DimensionType__c]
 
 	,QL.SBQQ__DefaultSubscriptionTerm__c
-	,COALESCE(sub.[SBQQ__Quantity__c], QL.SBQQ__Quantity__c )  as SBQQ__QuotedQuantity__c
-	,COALESCE(QL.SBQQ__PricebookEntryId__c,Con.PriceBook2__c,Con.PriceBook2Id,Con.SBQQ__OpportunityPricebookId__c) AS PricebookEntryId -- There is a pricebook mismatch between the Quote and the Contract parent of this subscription.
+	,COALESCE(sub.[SBQQ__Quantity__c], QL.SBQQ__Quantity__c )  as SBQQ__QuotedQuantity__c 
+	,COALESCE(PBE.Id,QL.SBQQ__PricebookEntryId__c) AS PricebookEntryId -- There is a pricebook mismatch between the Quote and the Contract parent of this subscription.
 
 	--,QL.SBQQ__Description__c as [Description] -- Quote line's description is nvarchar(max) and we only have 255 in the standard description field
 	,COALESCE(Sub.SBQQ__Dimension__c, QL.SBQQ__Dimension__c) as SBQQ__PriceDimension__c
@@ -85,6 +85,8 @@ Select
 	,COALESCE(Sub.SBQQ__EndDate__c, QL.[SBQQ__EndDate__c]) as EndDate
 	-- ,COALESCE(Sub.[SBQQ__ListPrice__c], QL.SBQQ__ListPrice__c) AS ListPrice -- An Order Product must have the same List Price as the related Price Book Entry
 	,QL.SBQQ__ListPrice__c as SBQQ__QuotedListPrice__c
+	,COALESCE(Sub.SBQQ__NetPrice__c, PBE.UnitPrice, 0) as UnitPrice
+	,COALESCE(Sub.SBQQ__NetPrice__c, PBE.UnitPrice, 0) as UnitPriceForceOverride__c
 	,COALESCE(sub.[SBQQ__Quantity__c], QL.SBQQ__Quantity__c )  as SBQQ__OrderedQuantity__c
 	,COALESCE(sub.[SBQQ__Quantity__c], QL.SBQQ__Quantity__c ) as Quantity
 	,COALESCE(Sub.SBQQ__PricingMethod__c, QL.SBQQ__PricingMethod__c) AS SBQQ__PricingMethod__c
@@ -93,11 +95,11 @@ Select
 
 	,COALESCE(Sub.SBQQ__ProrateMultiplier__c, QL.SBQQ__ProrateMultiplier__c) AS SBQQ__ProrateMultiplier__c
 -- 	,QL.SBQQ__RequiredBy__c
-	,COALESCE(Sub.SBQQ__SegmentIndex__c, QL.SBQQ__SegmentIndex__c ) as SBQQ__SegmentIndex__c
-	,Sub.SBQQ__SegmentKey__c
-	,Sub.SBQQ__SegmentLabel__c
+--	,COALESCE(Sub.SBQQ__SegmentIndex__c, QL.SBQQ__SegmentIndex__c ) as SBQQ__SegmentIndex__c
+--	,Sub.SBQQ__SegmentKey__c
+--	,Sub.SBQQ__SegmentLabel__c
 	,COALESCE(Sub.SBQQ__SubscriptionPricing__c, QL.SBQQ__SubscriptionPricing__c) AS SBQQ__SubscriptionPricing__c
-	,COALESCE(Sub.[SBQQ__StartDate__c], QL.SBQQ__StartDate__c ) as ServiceDate
+	,COALESCE(Sub.SBQQ__StartDate__c, Ord.EffectiveDate ) as ServiceDate
 	,COALESCE(QL.SBQQ__SubscriptionTerm__c, Inv.Subscription_Term__c) AS SBQQ__SubscriptionTerm__c
 	,COALESCE(Sub.SBQQ__SubscriptionType__c, QL.SBQQ__SubscriptionType__c) AS SBQQ__SubscriptionType__c
 	,QL.SBQQ__TaxCode__c
@@ -240,15 +242,25 @@ inner join SourceQA.dbo.[Contract] Con
 	on Sub.SBQQ__Contract__c = Con.ID
 Inner JOIN SourceQA.dbo.[Order]  Ord  -- Must have an order
 	on Ord.ContractId = Con.ID
-
+	and Sub.SBQQ__StartDate__c = Ord.EffectiveDate
 left join SourceQA.dbo.Invoice__c Inv
 	on Sub.Invoice__c = Inv.ID
 left join SourceQA.dbo.[PriceBookEntry] PBE
-	on QL.[SBQQ__PricebookEntryId__c] = PBE.ID
-	and P2.ID = PBE.Product2ID
+	on Sub.SBQQ__Product__c = PBE.Product2ID
+	and Ord.Pricebook2Id = PBE.Pricebook2Id
+	and Ord.CurrencyIsoCode = PBE.CurrencyIsoCode
+
+	--on QL.[SBQQ__PricebookEntryId__c] = PBE.ID
+	--and P2.ID = PBE.Product2ID
 
 Where Con.EndDate >= getdate()
 and Con.Status = 'Activated'
+and COALESCE(QL.SBQQ__PricebookEntryId__c, PBE.Id) IS NOT NULL
+-- and Con.Id = '8003t000008CtZnAAK'
+
+order by Con.Id,
+		Sub.SBQQ__StartDate__c
+
 
 -- select * from SourceQA.dbo.[Order]
 
@@ -270,8 +282,7 @@ SET [Sort] = OrderRowNumber;
 -- Data Validation
 ---------------------------------------------------------------------------------
 select count(*), COUNT(distinct Order_Item_Migration_id__c) from OrderItem_Load
-select * from StageQA.dbo.OrderItem_Load
-
+select * from StageQA.dbo.OrderItem_Load where PricebookEntryId IS NULL 
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
@@ -288,6 +299,7 @@ Select error, count(*) from StageQA.dbo.OrderItem_Load_Result a where error not 
 group by error
 
 -- USE Insert_Database_Name_Here; EXEC SF_Tableloader 'HardDelete:batchsize(10)', 'SANDBOX_QA', 'SBQQ__QuoteL		ine__c_Load_Result'
+select * from StageQA.dbo.OrderItem_Load_Result a where error != 'Operation Successful.'
 select * from StageQA.dbo.OrderItem_Load_Result
 select * from StageQA.dbo.OrderItem_Load
 
