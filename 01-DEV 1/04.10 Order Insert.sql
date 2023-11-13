@@ -126,26 +126,6 @@ order by Con.ID,
 		Sub.SBQQ__StartDate__c
 
 
-
-Select Sub.Id, Sub.SBQQ__EndDate__c, Con.EndDate, Ord.EndDate, Sub.SBQQ__StartDate__c, con.StartDate, Ord.EffectiveDate
-FROM SourceQA.dbo.[Contract] Con
-left join SourceQA.dbo.SBQQ__Subscription__c Sub
-	on Sub.SBQQ__Contract__c = Con.Id
-left join SourceQA.dbo.[Order] Ord
-	on Ord.ContractId = Con.Id
-left join SourceQA.dbo.SBQQ__Quote__c Qte
-	on Qte.ID = Con.SBQQ__Quote__c 
-left join SourceQA.dbo.Opportunity O
-	on Con.SBQQ__Opportunity__c = O.ID
-left join SourceQA.dbo.Opportunity RO -- When Opportunity & Quote are missing on Contract, we are using the Renewal Opportunity to get the PriceBookId
-	on Con.SBQQ__RenewalOpportunity__c = RO.ID
-left join SourceQA.dbo.Account Acct
-	on Con.AccountId = Acct.ID
-Where Con.EndDate >= getdate()
-and Con.Status = 'Activated'
-and Acct.Test_Account__c = 'false'
-and Sub.SBQQ__EndDate__c != Con.EndDate
-
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
 ---------------------------------------------------------------------------------
