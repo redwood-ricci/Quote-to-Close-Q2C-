@@ -83,12 +83,12 @@ Select
 
 	,MIN(Con.CreatedById) as CreatedById -- Requires a permission set to allow migration user to touch audit fields --https://help.salesforce.com/s/articleView?id=000386875&language=en_US&type=1
 	-- do we want the createddate to match the contract or quote?
-	,MIN(Con.CurrencyIsoCode) as CurrencyIsoCode
+	,MIN(Sub.CurrencyIsoCode) as CurrencyIsoCode
 	--,Inv.CurrencyIsoCode -- this should match the one on the quote?
 	
 	--,case when Qte.SBQQ__Type__c = 'Amendment' and Qte.SBQQ__StartDate__c is not null then Qte.SBQQ__StartDate__c else Con.[StartDate] end as EffectiveDate
 	,MIN(Coalesce(sub.SBQQ__StartDate__c, Con.[StartDate])) as EffectiveDate
-	,MIN(Coalesce(Con.[EndDate],Qte.SBQQ__EndDate__c)) as EndDate
+	,MAX(Coalesce(Con.[EndDate],Qte.SBQQ__EndDate__c)) as EndDate
 	,MIN(Con.OwnerId) as OwnerId
 	--,Inv.OwnerId as OwnerId -- Are invoice owners the same as the quote owner or ContractOwner?
 	,MIN(Coalesce(Qte.SBQQ__PaymentTerms__c,'Net 30')) as SBQQ__PaymentTerm__c -- Net 30 is the default value on the order object for this.
@@ -120,11 +120,32 @@ and Acct.Test_Account__c = 'false'
 group by Con.ID, 
 		Sub.SBQQ__StartDate__c
 
-
---Con.ID = '8003t000008D4Z8AAK' --'8003t000008aU32AAE' --Aj '8003t000007wDd9AAE'
+--Con.ID = '8003t000008D4Z8AAK' --'8003t000008aU32AAE' 
 -- only things that can amend and renew
 order by Con.ID,
 		Sub.SBQQ__StartDate__c
+
+
+
+Select Sub.Id, Sub.SBQQ__EndDate__c, Con.EndDate, Ord.EndDate, Sub.SBQQ__StartDate__c, con.StartDate, Ord.EffectiveDate
+FROM SourceQA.dbo.[Contract] Con
+left join SourceQA.dbo.SBQQ__Subscription__c Sub
+	on Sub.SBQQ__Contract__c = Con.Id
+left join SourceQA.dbo.[Order] Ord
+	on Ord.ContractId = Con.Id
+left join SourceQA.dbo.SBQQ__Quote__c Qte
+	on Qte.ID = Con.SBQQ__Quote__c 
+left join SourceQA.dbo.Opportunity O
+	on Con.SBQQ__Opportunity__c = O.ID
+left join SourceQA.dbo.Opportunity RO -- When Opportunity & Quote are missing on Contract, we are using the Renewal Opportunity to get the PriceBookId
+	on Con.SBQQ__RenewalOpportunity__c = RO.ID
+left join SourceQA.dbo.Account Acct
+	on Con.AccountId = Acct.ID
+Where Con.EndDate >= getdate()
+and Con.Status = 'Activated'
+and Acct.Test_Account__c = 'false'
+and Sub.SBQQ__EndDate__c != Con.EndDate
+
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
 ---------------------------------------------------------------------------------
