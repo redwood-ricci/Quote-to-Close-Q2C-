@@ -65,7 +65,7 @@ Select
 	,QL.SBQQ__BlockPrice__c
 	,P2.SBQQ__ChargeType__c
 --	,PBE.UnitPrice as UnitPrice
-	,PBE.UnitPrice as ListPrice
+	,COALESCE(PBE.UnitPrice, sub.SBQQ__ListPrice__c) as ListPrice
 -- 	,POpt.[SBQQ__ConfiguredSKU__c] as SBQQ__BundleRoot__c -- needs to be updated after sucessful load
 -- 	,P2.SBQQ__SubscriptionTerm__c as SBQQ__DefaultSubscriptionTerm__c
 	,PBE.Id as PBEntryId
@@ -77,14 +77,14 @@ Select
 
 	,QL.SBQQ__DefaultSubscriptionTerm__c
 	,COALESCE(sub.[SBQQ__Quantity__c], QL.SBQQ__Quantity__c )  as SBQQ__QuotedQuantity__c 
-	,COALESCE(PBE.Id,QL.SBQQ__PricebookEntryId__c) AS PricebookEntryId -- There is a pricebook mismatch between the Quote and the Contract parent of this subscription.
+	,COALESCE(PBE.Id, QL.SBQQ__PricebookEntryId__c) AS PricebookEntryId -- There is a pricebook mismatch between the Quote and the Contract parent of this subscription.
 
 	--,QL.SBQQ__Description__c as [Description] -- Quote line's description is nvarchar(max) and we only have 255 in the standard description field
 	,COALESCE(Sub.SBQQ__Dimension__c, QL.SBQQ__Dimension__c) as SBQQ__PriceDimension__c
 	,COALESCE(Sub.SBQQ__DiscountSchedule__c , QL.SBQQ__DiscountSchedule__c ) as SBQQ__DiscountSchedule__c
-	,COALESCE(Sub.SBQQ__EndDate__c, QL.[SBQQ__EndDate__c]) as EndDate
+	,COALESCE(Ord.EndDate, Sub.SBQQ__EndDate__c, QL.[SBQQ__EndDate__c]) as EndDate
 	-- ,COALESCE(Sub.[SBQQ__ListPrice__c], QL.SBQQ__ListPrice__c) AS ListPrice -- An Order Product must have the same List Price as the related Price Book Entry
-	,QL.SBQQ__ListPrice__c as SBQQ__QuotedListPrice__c
+	,COALESCE(QL.SBQQ__ListPrice__c, sub.SBQQ__ListPrice__c, PBE.UnitPrice) as SBQQ__QuotedListPrice__c
 	,COALESCE(Sub.SBQQ__NetPrice__c, PBE.UnitPrice, 0) as UnitPrice
 	,COALESCE(Sub.SBQQ__NetPrice__c, PBE.UnitPrice, 0) as UnitPriceForceOverride__c
 	,COALESCE(sub.[SBQQ__Quantity__c], QL.SBQQ__Quantity__c )  as SBQQ__OrderedQuantity__c
@@ -255,7 +255,7 @@ left join SourceQA.dbo.[PriceBookEntry] PBE
 
 Where Con.EndDate >= getdate()
 and Con.Status = 'Activated'
-and COALESCE(QL.SBQQ__PricebookEntryId__c, PBE.Id) IS NOT NULL
+--and COALESCE(QL.SBQQ__PricebookEntryId__c, PBE.Id) IS NULL
 -- and Con.Id = '8003t000008CtZnAAK'
 
 order by Con.Id,

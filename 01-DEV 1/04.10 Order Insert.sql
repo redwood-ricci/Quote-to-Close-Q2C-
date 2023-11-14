@@ -203,7 +203,7 @@ USE StageQA;
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 
-EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(200)','SANDBOX_QA','Order_Load'
+EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(50)','SANDBOX_QA','Order_Load'
 
 ---------------------------------------------------------------------------------
 -- Error Review	
@@ -217,7 +217,7 @@ where error not like '%success%'
 group by error
 order by num desc
 
-Select error, * from Order_Load_Result a where error like '%FIELD%'
+Select error, * from Order_Load_Result a where error not like '%success%'
 Select top 100 error, * from Order_Load -- a where error like '%Opportunity must have%'
 
 Select BillingCountry, count(*) from Order_Load_Result a where error like '%a problem with this country, even though it may appear correct%'
