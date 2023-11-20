@@ -34,13 +34,29 @@ USE StageQA;
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Subscription_Load' AND TABLE_SCHEMA = 'dbo')
 DROP TABLE StageQA.dbo.[Subscription_Load]
 
+if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Subscription_Delete' AND TABLE_SCHEMA = 'dbo')
+DROP TABLE StageQA.dbo.[Subscription_Delete]
+
 ---------------------------------------------------------------------------------
--- Create Staging Table
+-- Create Staging Table for delete
+---------------------------------------------------------------------------------
+Select
+	CAST('' as nvarchar(2000)) as Error
+	,Sub.Id as Id
+
+into StageQA.dbo.[Subscription_Delete]
+
+FROM SourceQA.dbo.[SBQQ__Subscription__c] Sub
+	
+WHERE ID IN ('')
+
+
+---------------------------------------------------------------------------------
+-- Create Staging Table for update
 ---------------------------------------------------------------------------------
 
 Select
-	CAST('' AS nvarchar(18)) AS [ID]
-	,CAST('' as nvarchar(2000)) as Error
+	CAST('' as nvarchar(2000)) as Error
 	,Con.AccountId as AccountID
 	,con.StartDate as ContractStartDate
 	,con.EndDate as ContractEndDate
@@ -55,7 +71,7 @@ Select
 	,sub.SBQQ__SegmentStartDate__c as SBQQ__SegmentStartDate__c
 	,sub.SBQQ__SegmentUplift__c as SBQQ__SegmentUplift__c
 	,sub.SBQQ__SegmentUpliftAmount__c as SBQQ__SegmentUpliftAmount__c
-
+	,PB.Name as PriceBookName
 
 -- MIGRATION FIELDS 																						
 	,concat(Con.ID,' - ',Sub.Id)  as Subscription_Migration_Id__c -- needs created on each object. Each object's field should be unique with the object name and migration_id__c at the end to avoid twin field issues. Field should be text, set to unique and external
