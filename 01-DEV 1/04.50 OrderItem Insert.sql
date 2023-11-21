@@ -99,7 +99,7 @@ Select
 --	,Sub.SBQQ__SegmentKey__c
 --	,Sub.SBQQ__SegmentLabel__c
 	,COALESCE(Sub.SBQQ__SubscriptionPricing__c, QL.SBQQ__SubscriptionPricing__c) AS SBQQ__SubscriptionPricing__c
-	,COALESCE(Sub.SBQQ__StartDate__c, Ord.EffectiveDate ) as ServiceDate
+	,COALESCE(Ord.EffectiveDate, Sub.SBQQ__StartDate__c ) as ServiceDate
 	,COALESCE(QL.SBQQ__SubscriptionTerm__c, Inv.Subscription_Term__c) AS SBQQ__SubscriptionTerm__c
 	,COALESCE(Sub.SBQQ__SubscriptionType__c, QL.SBQQ__SubscriptionType__c) AS SBQQ__SubscriptionType__c
 	,QL.SBQQ__TaxCode__c
@@ -240,11 +240,11 @@ left join SourceQA.dbo.SBQQ__ProductOption__c Popt
 	on COALESCE(Sub.SBQQ__ProductOption__c ,QL.SBQQ__ProductOption__c ) = Popt.ID
 inner join SourceQA.dbo.[Contract] Con
 	on Sub.SBQQ__Contract__c = Con.ID
-Inner JOIN SourceQA.dbo.[Order]  Ord  -- Must have an order
-	on Ord.ContractId = Con.ID
-	and Sub.SBQQ__StartDate__c = Ord.EffectiveDate
 left join SourceQA.dbo.Invoice__c Inv
 	on Sub.Invoice__c = Inv.ID
+Inner JOIN SourceQA.dbo.[Order]  Ord  -- Must have an order
+	on Ord.ContractId = Con.ID
+	and inv.Billing_Period_Start__c = Ord.EffectiveDate
 left join SourceQA.dbo.[PriceBookEntry] PBE
 	on Sub.SBQQ__Product__c = PBE.Product2ID
 	and Ord.Pricebook2Id = PBE.Pricebook2Id
@@ -256,14 +256,13 @@ left join SourceQA.dbo.[PriceBookEntry] PBE
 Where Con.EndDate >= getdate()
 and Con.Status = 'Activated'
 --and COALESCE(QL.SBQQ__PricebookEntryId__c, PBE.Id) IS NULL
--- and Con.Id = '8003t000008CtZnAAK'
+-- and Con.Id = '8003t000008D4idAAC'
 
 order by Con.Id,
-		Sub.SBQQ__StartDate__c
+		Ord.EffectiveDate
 
 
 -- select * from SourceQA.dbo.[Order]
-
 
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary

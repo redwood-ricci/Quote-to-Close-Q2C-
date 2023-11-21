@@ -37,6 +37,7 @@ USE StageQA;
 Select
 	*,
 	CAST('' as nvarchar(2000)) as Error
+	,PB.Id as External_Id__c
 
 
 INTO StageQA.dbo.Pricebook2_Load
@@ -47,10 +48,10 @@ WHERE Name LIKE '%Redwood% 2024%'
 	
 ---------------------------------------------------------------------------------
 --Drop Id from the Column
-EXEC sp_rename 'StageQA.dbo.Pricebook2_Load.Id', 'ExternalId';
+--EXEC sp_rename 'StageQA.dbo.Pricebook2_Load.Id', 'ExternalId';
 
 ALTER TABLE StageQA.dbo.Pricebook2_Load
-DROP COLUMN LastModifiedById, LastModifiedDate, CreatedDate, CreatedById;
+DROP COLUMN Id, LastModifiedById, LastModifiedDate, CreatedDate, CreatedById;
 
 ALTER TABLE StageQA.dbo.Pricebook2_Load
 ADD Id nchar(18);

@@ -35,8 +35,8 @@ DROP TABLE StageQA.dbo.[SBQQ__Dimension__c_Load]
 
 Select
 	CAST('' AS nvarchar(18)) AS [ID] 
+	,D.Id as External_Id__c
 	,Prod.Id as SBQQ__Product__c
-	,D.Id as ExternalId
 	,D.CurrencyIsoCode as CurrencyIsoCode
 	,CAST('' as nvarchar(2000)) as Error
 
@@ -44,7 +44,7 @@ INTO StageQA.dbo.SBQQ__Dimension__c_Load
 
 FROM SourceNeocol.dbo.SBQQ__Dimension__c D
 	 inner join StageQA.dbo.Product2_Load_Result Prod
-		on Prod.ExternalId = D.SBQQ__Product__c
+		on Prod.External_Id__c = D.SBQQ__Product__c
 
 WHERE --Prod.CreatedDate >= DATEADD(day,-90, GETDATE())
 	 Prod.IsActive = 'true'
