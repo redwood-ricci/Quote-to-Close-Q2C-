@@ -43,6 +43,7 @@ USE StageQA;
 
 Select
 	CAST('' AS nvarchar(18)) AS [ID] 
+	,PBE.Id as External_Id__c
 	,P.Id as Product2Id
 	,PBE.IsActive as IsActive
 	,coalesce(PB.Id, '01s50000000EG0SAAW') as PriceBook2Id
@@ -56,9 +57,9 @@ INTO StageQA.dbo.PriceBookEntry_Load
 
 FROM SourceNeocol.dbo.PriceBookEntry PBE
 	inner join SourceQA.dbo.Product2 p
-		on p.ExternalId = PBE.Product2Id
-	left join StageQA.dbo.Pricebook2_Load_Result PB
-		on PB.ExternalId = PBE.Pricebook2Id
+		on p.External_Id__c = PBE.Product2Id
+	left join SourceQA.dbo.Pricebook2 PB
+		on PB.External_Id__c = PBE.Pricebook2Id
 --WHERE PB.Name LIKE '%Redwood% 2024%' 
 
 Order by PB.Id asc
@@ -79,4 +80,4 @@ EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(100)','SANDBOX_QA','Pr
 -- Error Review	
 ---------------------------------------------------------------------------------
 
--- Select error, * from StageQA.dbo.Account_Load_Result a where error not like '%success%'
+Select error, * from StageQA.dbo.PriceBookEntry_Load_Result a where error not like '%success%'
