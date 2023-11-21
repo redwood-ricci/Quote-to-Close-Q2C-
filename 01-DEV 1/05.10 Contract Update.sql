@@ -40,27 +40,43 @@ DROP TABLE StageQA.dbo.[Contract_Load]
 ---------------------------------------------------------------------------------
 USE StageQA;
 
+-- create a temp table of first orders to join with contracts later
+WITH order_rank AS (
+  SELECT
+    ContractId,
+	Id as OrderId,
+    ROW_NUMBER() OVER (PARTITION BY ContractId ORDER BY EffectiveDate) AS rn -- choose the first order for each contract
+  FROM
+    SourceQA.dbo.[Order]
+	where ContractId is not null),
+
+first_orders as ( -- select the order rank and pull out only one row for each contract with the first order for that contract
+	select * from order_rank where rn = 1
+)
 
 
 Select 
-	Con.ID as Id,
-	CAST('' as nvarchar(2000)) as Error,
+	Con.ID as Id
+	,CAST('' as nvarchar(2000)) as Error
 
-	O.ID as [SBQQ__Order__c], -- update existing Contract to link to newly created Order
-
+	,O.OrderId as [SBQQ__Order__c] -- update existing Contract to link to first order for contract
+	,case when Oppty.Pricebook2Id = '01s3t000004H01QAAS' then '01sO90000008D4xIAE' -- replace tiered pricebook with Redwood New Deals 2024 else Redwood Legacy Deals 2024
+	else '01sO90000008D4yIAE' end as [SBQQ__RenewalPricebookId__c]
+	,'' as [SBQQ__AmendmentOpportunityRecordTypeId__c] -- blank out all ammendment opportunity contract IDs
+	,CONCAT_WS('-', con.Id, O.OrderId) as [Contract_Migration_Id__c]
 
 	/* ADD IN ANY OTHER UPDATES, IF NEEDED */
 
 	/* REFERENCE FIELDS */
 
-	Acct.ID as REF_AccountId, 
-	Oppty.Id as REF_OpportunityID, 
-	Qte.Id as REF_QuoteID
+	,Acct.ID as REF_AccountId
+	,Oppty.Id as REF_OpportunityID
+	,Qte.Id as REF_QuoteID
 
-	--INTO StageQA.dbo.Contract_Load
+	INTO StageQA.dbo.Contract_Load
 	FROM SourceQA.dbo.[Contract] Con
-	Inner join SourceQA.dbo.[Order] O
-		on Con.ID = O.[Order_Migration_id__c]
+	Left join First_Orders O
+		on Con.ID = O.ContractId
 	
 	LEFT JOIN SourceQA.dbo.Account Acct 
 		ON Con.AccountID = Acct.ID 
@@ -68,9 +84,9 @@ Select
 		ON Con.SBQQ__Quote__c = Qte.ID
 	LEFT JOIN SourceQA.dbo.Opportunity Oppty 
 		ON Con.[SBQQ__Opportunity__c] = Oppty.ID
-	--WHERE
-	--AND a.AccountID <> 'xxxxxxxxxxxxx'
-	ORDER BY Acct.ID
+	Where Con.EndDate >= getdate()
+	and Con.Status = 'Activated'
+	ORDER BY Acct.ID;
 
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
@@ -89,14 +105,16 @@ SET [Sort] = OrderRowNumber;
 ---------------------------------------------------------------------------------
 -- Validations
 ---------------------------------------------------------------------------------
-select ID, count(*) -- Change to migrated ID if added to object
+select ID, count(Contract_Migration_Id__c) -- Change to migrated ID if added to object
 from StageQA.dbo.[Contract_Load]
 group by ID
 having count(*) > 1
 
+/*
 select *
  from StageQA.dbo.[Contract_Load]
-
+where ID = '8003t000008OIF1AAO'
+*/
 
 ---------------------------------------------------------------------------------
 -- Scrub
@@ -113,5 +131,20 @@ EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','SANDBOX_QA','Con
 ---------------------------------------------------------------------------------
 
 -- Select error, * from StageQA.dbo.Contract_Load_Result a where error not like '%success%'
+Select
+error,
+count(*)
+from StageQA.dbo.Contract_Load_Result a where error not like '%success%'
+group by error
+
+Select
+error,
+
+from StageQA.dbo.Contract_Load_Result a where error not like '%success%'
+group by error
+
+
+Select
+* from StageQA.dbo.Contract_Load_Result a where REF_AccountId = '0013t00002Qps2cAAB'
 
 -- NOTE WITH UPDATES, DO NOT USE DBAMP'S DELETE. SAVE THE ORIGINAL VALUE AND JUST SET IT BACK WITH ANOTHER UPDATE
