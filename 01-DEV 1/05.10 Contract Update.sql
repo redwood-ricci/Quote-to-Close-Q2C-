@@ -62,8 +62,9 @@ Select
 	,O.OrderId as [SBQQ__Order__c] -- update existing Contract to link to first order for contract
 	,case when Oppty.Pricebook2Id = '01s3t000004H01QAAS' then '01sO90000008D4xIAE' -- replace tiered pricebook with Redwood New Deals 2024 else Redwood Legacy Deals 2024
 	else '01sO90000008D4yIAE' end as [SBQQ__RenewalPricebookId__c]
-	,'' as [SBQQ__AmendmentOpportunityRecordTypeId__c] -- blank out all ammendment opportunity contract IDs
+	,'' as [SBQQ__AmendmentOpportunityRecordTypeId__c] -- blank out all ammendment opportunity record type IDs
 	,CONCAT_WS('-', con.Id, O.OrderId) as [Contract_Migration_Id__c]
+	,'false' as [SBQQ__PreserveBundleStructureUponRenewals__c]
 
 	/* ADD IN ANY OTHER UPDATES, IF NEEDED */
 
