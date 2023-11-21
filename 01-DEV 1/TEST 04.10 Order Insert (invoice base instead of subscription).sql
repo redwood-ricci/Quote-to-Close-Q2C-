@@ -90,8 +90,8 @@ Select
 	--,Inv.CurrencyIsoCode -- this should match the one on the quote?
 	
 	--,case when Qte.SBQQ__Type__c = 'Amendment' and Qte.SBQQ__StartDate__c is not null then Qte.SBQQ__StartDate__c else Con.[StartDate] end as EffectiveDate
-	,MIN(Coalesce(inv.Billing_Period_Start__c, Con.[StartDate])) as EffectiveDate
-	,MAX(Coalesce(inv.Billing_Period_End__c,Qte.SBQQ__EndDate__c)) as EndDate
+	,MIN(Coalesce((case when inv.Billing_Period_Start__c < Con.[StartDate] then Con.[StartDate] else inv.Billing_Period_Start__c end), Con.[StartDate])) as EffectiveDate
+	,MAX(Coalesce((case when inv.Billing_Period_End__c > Con.[EndDate] then Con.[EndDate] else inv.Billing_Period_End__c end),Qte.SBQQ__EndDate__c)) as EndDate
 	,MIN(Con.OwnerId) as OwnerId
 	--,Inv.OwnerId as OwnerId -- Are invoice owners the same as the quote owner or ContractOwner?
 	,MIN(Coalesce(Qte.SBQQ__PaymentTerms__c,'Net 30')) as SBQQ__PaymentTerm__c -- Net 30 is the default value on the order object for this.
@@ -106,6 +106,8 @@ into StageQA.dbo.[Order_Load]
 FROM SourceQA.dbo.[Contract] Con
 left join SourceQA.dbo.Invoice__c inv
 	on inv.Related_Contract__c = Con.Id
+left join SourceQA.dbo.SBQQ__Subscription__c Sub
+	on Sub.SBQQ__Contract__c = Con.Id
 left join SourceQA.dbo.SBQQ__Quote__c Qte
 	on Qte.ID = Con.SBQQ__Quote__c 
 --	or Qte.ID = 
@@ -121,12 +123,12 @@ and Status = 'Activated'
 and Acct.Test_Account__c = 'false'
 
 group by Con.ID, 
-		inv.Billing_Period_Start__c
+		Coalesce((case when inv.Billing_Period_Start__c < Con.[StartDate] then Con.[StartDate] else inv.Billing_Period_Start__c end), Con.[StartDate])
 
 --Con.ID = '8003t000008D4Z8AAK' --'8003t000008aU32AAE' 
 -- only things that can amend and renew
 order by Con.ID,
-		inv.Billing_Period_Start__c
+		EffectiveDate
 
 
 ---------------------------------------------------------------------------------
