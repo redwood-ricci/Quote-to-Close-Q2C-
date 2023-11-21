@@ -90,8 +90,8 @@ Select
 	--,Inv.CurrencyIsoCode -- this should match the one on the quote?
 	
 	--,case when Qte.SBQQ__Type__c = 'Amendment' and Qte.SBQQ__StartDate__c is not null then Qte.SBQQ__StartDate__c else Con.[StartDate] end as EffectiveDate
-	,MIN(Coalesce((case when inv.Billing_Period_Start__c < Con.[StartDate] then Con.[StartDate] else inv.Billing_Period_Start__c end), Con.[StartDate])) as EffectiveDate
-	,MAX(Coalesce((case when inv.Billing_Period_End__c > Con.[EndDate] then Con.[EndDate] else inv.Billing_Period_End__c end),Qte.SBQQ__EndDate__c)) as EndDate
+	,MIN(Coalesce((case when (inv.Billing_Period_Start__c < Con.[StartDate] or inv.Billing_Period_Start__c > Con.EndDate) then Con.[StartDate] else inv.Billing_Period_Start__c end), Con.[StartDate])) as EffectiveDate
+	,MAX(Coalesce((case when (inv.Billing_Period_End__c > Con.[EndDate] or inv.Billing_Period_End__c = NULL) then Con.[EndDate] else inv.Billing_Period_End__c end), Qte.SBQQ__EndDate__c)) as EndDate
 	,MIN(Con.OwnerId) as OwnerId
 	--,Inv.OwnerId as OwnerId -- Are invoice owners the same as the quote owner or ContractOwner?
 	,MIN(Coalesce(Qte.SBQQ__PaymentTerms__c,'Net 30')) as SBQQ__PaymentTerm__c -- Net 30 is the default value on the order object for this.
@@ -159,6 +159,7 @@ having count(*) > 1
 select *
  from StageQA.dbo.[Order_Load]
 
+ select * from StageQA.dbo.Order_Load_Result where ContractId = '8003t000007wQZiAAM'
 
 ---------------------------------------------------------------------------------
 -- Scrub
