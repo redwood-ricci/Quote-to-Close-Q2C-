@@ -25,6 +25,11 @@ EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Product2','PKCHUNK'
 
 USE SourceNeocol
 
+EXEC SourceNeocol.dbo.SF_Replicate 'SANDBOX_NEOCOL','Account','PKCHUNK'
+EXEC SourceNeocol.dbo.SF_Replicate 'SANDBOX_NEOCOL','Asset','PKCHUNK'
+EXEC SourceNeocol.dbo.SF_Replicate 'SANDBOX_NEOCOL', 'SBQQ__Subscription__c','PKCHUNK'
+EXEC SourceNeocol.dbo.SF_Replicate 'SANDBOX_NEOCOL', 'Contract' ,'PKCHUNK'
+EXEC SourceNeocol.dbo.SF_Replicate 'SANDBOX_NEOCOL', 'Product2','PKCHUNK'
 EXEC SourceNeocol.dbo.SF_Replicate 'SANDBOX_NEOCOL','RW_Product_License_Component__c','PKCHUNK'
 EXEC SourceNeocol.dbo.SF_Replicate 'SANDBOX_NEOCOL','RW_Component_License_Key__c','PKCHUNK'
 EXEC SourceNeocol.dbo.SF_Replicate 'SANDBOX_NEOCOL','RW_Subscription_Instance__c','PKCHUNK'
@@ -38,9 +43,6 @@ USE StageQA;
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'SubscriptionInstance_Load' AND TABLE_SCHEMA = 'dbo')
 DROP TABLE StageQA.dbo.[SubscriptionInstance_Load]
 
-if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'ComponentLicenseKey_Load' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.[ComponentLicenseKey_Load]
-
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'ProductLicenseComponent_Load' AND TABLE_SCHEMA = 'dbo')
 DROP TABLE StageQA.dbo.[ProductLicenseComponent_Load]
 
@@ -52,19 +54,21 @@ Select top 100
 	,CAST('' as nvarchar(2000)) as Error
 	,a.Subscription__c as Subscription__c
 	,prod.name as ProductName
+	,prod.Id as ProdId
 	,sub.SBQQ__StartDate__c as StartDate
+	,sub.SBQQ__EndDate__c as EndDate
 	,a.SerialNumber as SerialNumber
 
 into StageQA.dbo.[SubscriptionInstance_Load]
 
 FROM SourceQA.dbo.Asset a
-	left join SourceQA.dbo.Account acc
+	left join SourceNeocol.dbo.Account acc
 		on acc.Id = a.AccountId
-	left join SourceQA.dbo.SBQQ__Subscription__c sub
+	left join SourceNeocol.dbo.SBQQ__Subscription__c sub
 		on sub.Id = a.Subscription__c
-	left join SourceQA.dbo.Contract con
+	left join SourceNeocol.dbo.Contract con
 		on con.Id = sub.SBQQ__Contract__c
-	left join SourceQA.dbo.Product2 prod
+	left join SourceNeocol.dbo.Product2 prod
 		on prod.Id = sub.SBQQ__Product__c
 
 WHERE sub.SBQQ__EndDate__c > getdate()
@@ -79,6 +83,13 @@ WHERE sub.SBQQ__EndDate__c > getdate()
 
 select * from StageQA.dbo.[SubscriptionInstance_Load]
 
+---------------------------------------------------------------------------------------------------------------------------------------------
+-- Component License key Insert
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'ComponentLicenseKey_Load' AND TABLE_SCHEMA = 'dbo')
+DROP TABLE StageQA.dbo.[ComponentLicenseKey_Load]
+
 ---------------------------------------------------------------------------------
 -- Create Staging Table for Component License Key
 ---------------------------------------------------------------------------------
@@ -86,38 +97,28 @@ Select
 	CAST('' AS nvarchar(18)) AS [ID]
 	,CAST('' as nvarchar(2000)) as Error
 	,a.Subscription__c as Subscription__c
+	,PLC.Id as Product_License_Component__c
+	,a.SerialNumber as License_Key__c
+	,SI.Id as Subscription_Instance__c
 
-into StageQA.dbo.[SubscriptionInstance_Load]
+into StageQA.dbo.[ComponentLicenseKey_Load]
 
-FROM SourceQA.dbo.Asset a
-	left join SourceQA.dbo.Account acc
-		on acc.Id = a.AccountId
-	left join SourceQA.dbo.SBQQ__Subscription__c sub
+FROM SourceNeocol.dbo.Asset a
+	left join SourceNeocol.dbo.SBQQ__Subscription__c sub
 		on sub.Id = a.Subscription__c
-	left join SourceQA.dbo.Contract con
+	inner join SourceNeocol.dbo.RW_Subscription_Instance__c SI
+		on SI.Subscription__c = Sub.Id
+	left join SourceNeocol.dbo.Contract con
 		on con.Id = sub.SBQQ__Contract__c
-	left join SourceQA.dbo.Product2 prod
-		on prod.Id = sub.SBQQ__Product__c
+	left join SourceNeocol.dbo.Product2 prod
+		on prod.External_Id__c = sub.SBQQ__Product__c --External_Id__c should be replaced with Id
+	left join SourceNeocol.dbo.RW_Product_License_Component__c PLC -- sourceneocol should change
+		on prod.Id = PLC.Product__c
 
 WHERE sub.SBQQ__EndDate__c > getdate()
 	and con.Status = 'Activated'
-	and Acct.Test_Account__c = 'false'
 	and sub.sbqq__bundled__c = 'false'
 	and sub.SBQQ__ProductOption__c = NULL
-
----------------------------------------------------------------------------------
--- Validations
----------------------------------------------------------------------------------
-select Subscription_Migration_Id__c, count(*)
-from StageQA.dbo.[Subscription_Load]
-group by Subscription_Migration_Id__c
-having count(*) > 1
-
-select *
- from StageQA.dbo.[Subscription_Load]
-
-
-USE StageQA;
 
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce

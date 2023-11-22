@@ -12,6 +12,9 @@
 ---------------------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------------
 
+-- check this opportunity after running as an example of good output: 0063t000013DARlAAO
+
+
 ---------------------------------------------------------------------------------
 -- Replicate Data
 ---------------------------------------------------------------------------------
@@ -25,7 +28,7 @@ EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Contract','PKCHUNK'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Order','PKCHUNK'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Invoice__c','PKCHUNK'
 
-
+-- select * from SourceQA.dbo.[Order]
 
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
@@ -55,7 +58,7 @@ Select
 	--,'New' as Type -- Valid options are New, Renewal and Re-Quote as picklist values. None are active in the QA sandbox. If build activates this, the first one created from a quote would be new. If it is a renewal quote, it owould be Renewal
 
 --SUBSCRIPTION FIEDS
-	,sub.SBQQ__StartDate__c as SubStartDate
+	-- ,inv.Subscription_Start_Date__c as SubStartDate
 
 --TWIN FIELDS
 	,MIN(Con.Annual_Increase_Cap_Percentage__c)  as Annual_Increase_Cap_Percentage__c
@@ -83,12 +86,12 @@ Select
 
 	,MIN(Con.CreatedById) as CreatedById -- Requires a permission set to allow migration user to touch audit fields --https://help.salesforce.com/s/articleView?id=000386875&language=en_US&type=1
 	-- do we want the createddate to match the contract or quote?
-	,MIN(Sub.CurrencyIsoCode) as CurrencyIsoCode
+	,MIN(Con.CurrencyIsoCode) as CurrencyIsoCode
 	--,Inv.CurrencyIsoCode -- this should match the one on the quote?
 	
 	--,case when Qte.SBQQ__Type__c = 'Amendment' and Qte.SBQQ__StartDate__c is not null then Qte.SBQQ__StartDate__c else Con.[StartDate] end as EffectiveDate
-	,MIN(Coalesce(sub.SBQQ__StartDate__c, Con.[StartDate])) as EffectiveDate
-	,MAX(Coalesce(Con.[EndDate],Qte.SBQQ__EndDate__c)) as EndDate
+	,MIN(Coalesce((case when (inv.Billing_Period_Start__c < Con.[StartDate] or inv.Billing_Period_Start__c > Con.EndDate) then Con.[StartDate] else inv.Billing_Period_Start__c end), Con.[StartDate])) as EffectiveDate
+	,MAX(Coalesce((case when (inv.Billing_Period_End__c > Con.[EndDate] or inv.Billing_Period_End__c = NULL) then Con.[EndDate] else inv.Billing_Period_End__c end), Qte.SBQQ__EndDate__c)) as EndDate
 	,MIN(Con.OwnerId) as OwnerId
 	--,Inv.OwnerId as OwnerId -- Are invoice owners the same as the quote owner or ContractOwner?
 	,MIN(Coalesce(Qte.SBQQ__PaymentTerms__c,'Net 30')) as SBQQ__PaymentTerm__c -- Net 30 is the default value on the order object for this.
@@ -96,11 +99,13 @@ Select
 	,MIN(Coalesce(Con.SBQQ__RenewalUpliftRate__c ,Qte.SBQQ__RenewalUpliftRate__c)) as SBQQ__RenewalUpliftRate__c
 
 -- MIGRATION FIELDS 																						
-	,concat(MIN(Con.ID),' - ',MIN(Sub.Id))  as Order_Migration_id__c -- needs created on each object. Each object's field should be unique with the object name and migration_id__c at the end to avoid twin field issues. Field should be text, set to unique and external
+	,concat(MIN(Con.ID),' - ',MIN(inv.Id))  as Order_Migration_id__c -- needs created on each object. Each object's field should be unique with the object name and migration_id__c at the end to avoid twin field issues. Field should be text, set to unique and external
 
 into StageQA.dbo.[Order_Load]
 
 FROM SourceQA.dbo.[Contract] Con
+left join SourceQA.dbo.Invoice__c inv
+	on inv.Related_Contract__c = Con.Id
 left join SourceQA.dbo.SBQQ__Subscription__c Sub
 	on Sub.SBQQ__Contract__c = Con.Id
 left join SourceQA.dbo.SBQQ__Quote__c Qte
@@ -118,12 +123,12 @@ and Status = 'Activated'
 and Acct.Test_Account__c = 'false'
 
 group by Con.ID, 
-		Sub.SBQQ__StartDate__c
+		Coalesce((case when inv.Billing_Period_Start__c < Con.[StartDate] then Con.[StartDate] else inv.Billing_Period_Start__c end), Con.[StartDate])
 
 --Con.ID = '8003t000008D4Z8AAK' --'8003t000008aU32AAE' 
 -- only things that can amend and renew
 order by Con.ID,
-		Sub.SBQQ__StartDate__c
+		EffectiveDate
 
 
 ---------------------------------------------------------------------------------
@@ -154,6 +159,7 @@ having count(*) > 1
 select *
  from StageQA.dbo.[Order_Load]
 
+ select * from StageQA.dbo.Order_Load_Result where ContractId = '8003t000007wQZiAAM'
 
 ---------------------------------------------------------------------------------
 -- Scrub
