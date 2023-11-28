@@ -42,14 +42,23 @@ DROP TABLE StageQA.dbo.[Order_Load]
 -- Create Staging Table
 ---------------------------------------------------------------------------------
 -- select primary from SourceQA.dbo.Opportunity where id = '0063t000012TzCQAA0'
+DECLARE @RedwoodNewDeal2024 VARCHAR(100); -- Declares a string variable with a maximum length of 100 characters.
+DECLARE @RedwoodLegacyDeal VARCHAR(100);
+DECLARE @TieredPriceBook2023 VARCHAR(100);
 
+SET @RedwoodNewDeal2024 = '01sO90000008D4xIAE';
+SET @RedwoodLegacyDeal = '01sO90000008D4yIAE';
+SET @TieredPriceBook2023 = '01s3t000004H01QAAS';
 
 Select
 	CAST('' AS nvarchar(18)) AS [ID]
 	,CAST('' as nvarchar(2000)) as Error
 	,MIN(Con.AccountId) as AccountID
 	,MIN(Con.SBQQ__Opportunity__c) as OpportunityId
-	,MAX(coalesce(Qte.SBQQ__Pricebook__c, RO.Pricebook2Id, Con.SBQQ__OpportunityPricebookId__c)) as Pricebook2Id -- STill some nulls. Do we need a default value to coalesce in if nothing is found?
+	--,MAX(coalesce(Qte.SBQQ__Pricebook__c, RO.Pricebook2Id, Con.SBQQ__OpportunityPricebookId__c)) as Pricebook2Id -- STill some nulls. Do we need a default value to coalesce in if nothing is found?
+	,case when MAX(coalesce(Qte.SBQQ__Pricebook__c, RO.Pricebook2Id, Con.SBQQ__OpportunityPricebookId__c)) = @TieredPriceBook2023 then @RedwoodNewDeal2024 -- replace tiered pricebook with Redwood New Deals 2024 else Redwood Legacy Deals 2024
+		else @RedwoodLegacyDeal end as Pricebook2Id
+
 	,MIN(con.SBQQ__Quote__c) as SBQQ__Quote__c
 	,Con.ID as ContractId
 --	,'True' as SBQQ__Contracted__c
@@ -121,6 +130,8 @@ left join SourceQA.dbo.Account Acct
 Where EndDate >= getdate()
 and Status = 'Activated'
 and Acct.Test_Account__c = 'false'
+and coalesce(Qte.SBQQ__Pricebook__c, RO.Pricebook2Id, Con.SBQQ__OpportunityPricebookId__c) != @RedwoodNewDeal2024
+and coalesce(Qte.SBQQ__Pricebook__c, RO.Pricebook2Id, Con.SBQQ__OpportunityPricebookId__c) != @RedwoodLegacyDeal
 
 group by Con.ID, 
 		Coalesce((case when inv.Billing_Period_Start__c < Con.[StartDate] then Con.[StartDate] else inv.Billing_Period_Start__c end), Con.[StartDate])

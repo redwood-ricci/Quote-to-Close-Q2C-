@@ -45,6 +45,13 @@ DROP TABLE StageQA.dbo.OrderItem_Load
 ---------------------------------------------------------------------------------
 -- Create Staging Table
 ---------------------------------------------------------------------------------
+DECLARE @RedwoodNewDeal2024 VARCHAR(100); -- Declares a string variable with a maximum length of 100 characters.
+DECLARE @RedwoodLegacyDeal VARCHAR(100);
+DECLARE @TieredPriceBook2023 VARCHAR(100);
+
+SET @RedwoodNewDeal2024 = '01sO90000008D4xIAE';
+SET @RedwoodLegacyDeal = '01sO90000008D4yIAE';
+SET @TieredPriceBook2023 = '01s3t000004H01QAAS';
 
 Select
 -- top 10000
@@ -255,6 +262,8 @@ left join SourceQA.dbo.[PriceBookEntry] PBE
 
 Where Con.EndDate >= getdate()
 and Con.Status = 'Activated'
+and COALESCE(PBE.Id, QL.SBQQ__PricebookEntryId__c) != @RedwoodNewDeal2024
+and COALESCE(PBE.Id, QL.SBQQ__PricebookEntryId__c) != @RedwoodLegacyDeal
 --and COALESCE(QL.SBQQ__PricebookEntryId__c, PBE.Id) IS NULL
 -- and Con.Id = '8003t000008D4idAAC'
 
