@@ -27,6 +27,7 @@ Select
 	CAST('' as nvarchar(255)) as Error,
 	Order_Migration_id__c,
 	CreatedDate as REF_CreatedDate
+	where Order_Migration_id__c not like ''
 
 into StageQA.dbo.Order_DELETE
 from  SourceQA.dbo.[Order]
@@ -45,10 +46,18 @@ ADD [Sort] int IDENTITY (1,1)
 ---------------------------------------------------------------------------------
 EXEC SF_TableLoader 'Delete','[SANDBOX_QA]','Order_DELETE'
 
+select Error, count(*)
+--into StageQA.dbo.Order_DELETE2
+from StageQA.dbo.Order_DELETE_Result
+where error not like '%Success%'
+group by error
+
 select * 
 --into StageQA.dbo.Order_DELETE2
 from StageQA.dbo.Order_DELETE_Result
 where error not like '%Success%'
+
+
 -- and error  <> 'UNDELETE_FAILED: Entity is not in the recycle bin'
 
 --EXEC SF_TableLoader 'Delete:batchsize(1)','[SANDBOX_QA]','Order_DELETE2'

@@ -92,8 +92,8 @@ Select
 	-- ,COALESCE(Sub.[SBQQ__ListPrice__c], QL.SBQQ__ListPrice__c) AS ListPrice -- An Order Product must have the same List Price as the related Price Book Entry
 	,COALESCE(QL.SBQQ__ListPrice__c, sub.SBQQ__ListPrice__c) as SBQQ__QuotedListPrice__c -- , PBE.UnitPrice
 	,COALESCE(QL.SBQQ__NetPrice__c, sub.SBQQ__ListPrice__c,0) as UnitPrice -- , PBE.UnitPrice
-	,0 as UnitPriceForceOverride__c -- , PBE.UnitPrice
-	,COALESCE(QL.SBQQ__Quantity__c , sub.[Effective_Quantity__c])  as SBQQ__OrderedQuantity__c
+	,COALESCE(QL.SBQQ__NetPrice__c, sub.SBQQ__ListPrice__c,0) as UnitPriceForceOverride__c -- , PBE.UnitPrice
+	,COALESCE(QL.SBQQ__Quantity__c ,sub.[Effective_Quantity__c])  as SBQQ__OrderedQuantity__c
 	,COALESCE(QL.SBQQ__Quantity__c ,sub.[Effective_Quantity__c]) as Quantity
 	,COALESCE(QL.SBQQ__PricingMethod__c, Sub.SBQQ__PricingMethod__c) AS SBQQ__PricingMethod__c
 	,COALESCE(Sub.SBQQ__ProductSubscriptionType__c, QL.SBQQ__ProductSubscriptionType__c) AS SBQQ__ProductSubscriptionType__c
