@@ -85,7 +85,6 @@ Select
 	,QL.SBQQ__DefaultSubscriptionTerm__c
 	,COALESCE(QL.SBQQ__Quantity__c, sub.[Effective_Quantity__c])  as SBQQ__QuotedQuantity__c 
 	,COALESCE(PBE.Id, QL.SBQQ__PricebookEntryId__c) AS PricebookEntryId -- There is a pricebook mismatch between the Quote and the Contract parent of this subscription.
-
 	--,QL.SBQQ__Description__c as [Description] -- Quote line's description is nvarchar(max) and we only have 255 in the standard description field
 	,COALESCE(Sub.SBQQ__Dimension__c, QL.SBQQ__Dimension__c) as SBQQ__PriceDimension__c
 	,COALESCE(Sub.SBQQ__DiscountSchedule__c , QL.SBQQ__DiscountSchedule__c ) as SBQQ__DiscountSchedule__c
