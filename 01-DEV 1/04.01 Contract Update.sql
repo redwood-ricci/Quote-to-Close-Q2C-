@@ -13,6 +13,12 @@
 --- 3. Disable Workflow Rule "Contract - Expired"
 ---------------------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------------
+/*
+We have to remove the Opportunity products(to support Pricebookid update)
+Update the renewal Opportunity with new Pricebookids(based on the Contract Renewal Pricebookid)
+11:14
+Set Opportunity channel, Partner Account & Partner Contact, subscription start and end date on Contract
+*/
 
 ---------------------------------------------------------------------------------
 -- Replicate Data
@@ -126,6 +132,10 @@ where ID = '8003t000008OIF1AAO'
 ---------------------------------------------------------------------------------
 USE StageQA;
 EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','SANDBOX_QA','Contract_Load'
+
+--- check box ---
+
+----------------
 
 ---------------------------------------------------------------------------------
 -- Error Review	

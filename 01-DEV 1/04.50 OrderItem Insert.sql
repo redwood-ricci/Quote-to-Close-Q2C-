@@ -83,7 +83,7 @@ Select
 ,Sub.[SBQQ__DimensionType__c]
 
 	,QL.SBQQ__DefaultSubscriptionTerm__c
-	,COALESCE(sub.[Effective_Quantity__c], QL.SBQQ__Quantity__c )  as SBQQ__QuotedQuantity__c 
+	,COALESCE(QL.SBQQ__Quantity__c, sub.[Effective_Quantity__c])  as SBQQ__QuotedQuantity__c 
 	,COALESCE(PBE.Id, QL.SBQQ__PricebookEntryId__c) AS PricebookEntryId -- There is a pricebook mismatch between the Quote and the Contract parent of this subscription.
 
 	--,QL.SBQQ__Description__c as [Description] -- Quote line's description is nvarchar(max) and we only have 255 in the standard description field
@@ -91,14 +91,14 @@ Select
 	,COALESCE(Sub.SBQQ__DiscountSchedule__c , QL.SBQQ__DiscountSchedule__c ) as SBQQ__DiscountSchedule__c
 	,COALESCE(Ord.EndDate, Sub.SBQQ__EndDate__c, QL.[SBQQ__EndDate__c]) as EndDate
 	-- ,COALESCE(Sub.[SBQQ__ListPrice__c], QL.SBQQ__ListPrice__c) AS ListPrice -- An Order Product must have the same List Price as the related Price Book Entry
-	,COALESCE(QL.SBQQ__ListPrice__c, sub.SBQQ__ListPrice__c, PBE.UnitPrice) as SBQQ__QuotedListPrice__c
-	,COALESCE(Sub.SBQQ__NetPrice__c, PBE.UnitPrice, 0) as UnitPrice
-	,COALESCE(Sub.SBQQ__NetPrice__c, PBE.UnitPrice, 0) as UnitPriceForceOverride__c
-	,COALESCE(sub.[Effective_Quantity__c], QL.SBQQ__Quantity__c )  as SBQQ__OrderedQuantity__c
-	,COALESCE(sub.[Effective_Quantity__c], QL.SBQQ__Quantity__c ) as Quantity
-	,COALESCE(Sub.SBQQ__PricingMethod__c, QL.SBQQ__PricingMethod__c) AS SBQQ__PricingMethod__c
+	,COALESCE(QL.SBQQ__ListPrice__c, sub.SBQQ__ListPrice__c) as SBQQ__QuotedListPrice__c -- , PBE.UnitPrice
+	,COALESCE(QL.SBQQ__NetPrice__c, sub.SBQQ__ListPrice__c,0) as UnitPrice -- , PBE.UnitPrice
+	,0 as UnitPriceForceOverride__c -- , PBE.UnitPrice
+	,COALESCE(QL.SBQQ__Quantity__c , sub.[Effective_Quantity__c])  as SBQQ__OrderedQuantity__c
+	,COALESCE(QL.SBQQ__Quantity__c ,sub.[Effective_Quantity__c]) as Quantity
+	,COALESCE(QL.SBQQ__PricingMethod__c, Sub.SBQQ__PricingMethod__c) AS SBQQ__PricingMethod__c
 	,COALESCE(Sub.SBQQ__ProductSubscriptionType__c, QL.SBQQ__ProductSubscriptionType__c) AS SBQQ__ProductSubscriptionType__c
-	,COALESCE(Sub.SBQQ__ProductOption__c ,QL.SBQQ__ProductOption__c ) as SBQQ__ProductOption__c
+	,COALESCE(Sub.SBQQ__ProductOption__c ,QL.SBQQ__ProductOption__c) as SBQQ__ProductOption__c
 
 	,COALESCE(Sub.SBQQ__ProrateMultiplier__c, QL.SBQQ__ProrateMultiplier__c) AS SBQQ__ProrateMultiplier__c
 -- 	,QL.SBQQ__RequiredBy__c
@@ -291,6 +291,12 @@ SET [Sort] = OrderRowNumber;
 ---------------------------------------------------------------------------------
 select count(*), COUNT(distinct Order_Item_Migration_id__c) from OrderItem_Load
 select * from StageQA.dbo.OrderItem_Load where PricebookEntryId IS NULL 
+
+-- the opportunity below does not have a quote line for the renewal only MFT server bundle subscription
+-- there is a quote line on the actual quote, because that quote line is not attached to the subscription it's pulling the wrong unit price
+-- and inflating the value of the opportunity when looking at an order level
+-- going to try to remove logic from the unit price calculation to fix this
+-- select * from StageQA.dbo.OrderItem_Load where Related_Opportunity_Id__c = '0063t00000t3DnmAAE'
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
@@ -311,7 +317,7 @@ select * from StageQA.dbo.OrderItem_Load_Result a where error != 'Operation Succ
 select * from StageQA.dbo.OrderItem_Load_Result
 select * from StageQA.dbo.OrderItem_Load
 
-EXEC StageQA.dbo.SF_Tableloader 'DELETE','SANDBOX_QA','OrderItem_Load_result'
+-- EXEC StageQA.dbo.SF_Tableloader 'DELETE','SANDBOX_QA','OrderItem_Load_result'
 
 
 select * 
