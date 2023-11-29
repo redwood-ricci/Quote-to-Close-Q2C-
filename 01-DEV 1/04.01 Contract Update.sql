@@ -14,10 +14,13 @@
 ---------------------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------------
 /*
-We have to remove the Opportunity products(to support Pricebookid update)
+We have to remove the Opportunity products from contract renewal opportunity (to support Pricebookid update)
 Update the renewal Opportunity with new Pricebookids(based on the Contract Renewal Pricebookid)
 11:14
 Set Opportunity channel, Partner Account & Partner Contact, subscription start and end date on Contract
+
+1. update contract with new pricebook
+2. remove products from contract
 */
 
 ---------------------------------------------------------------------------------
@@ -31,7 +34,7 @@ EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','RecordType','PKCHUNK'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','SBQQ__Quote__c','PKCHUNK'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Opportunity','PKCHUNK'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Contract','PKCHUNK'
-
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','OpportunityLineItem','PKCHUNK'
 
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
@@ -45,6 +48,9 @@ DROP TABLE StageQA.dbo.[Contract_Load]
 -- Create Staging Table
 ---------------------------------------------------------------------------------
 USE StageQA;
+
+
+
 
 -- create a temp table of first orders to join with contracts later
 WITH order_rank AS (
@@ -60,17 +66,24 @@ first_orders as ( -- select the order rank and pull out only one row for each co
 	select * from order_rank where rn = 1
 )
 
+DECLARE @RedwoodNewDeal2024 VARCHAR(100); -- Declares a string variable with a maximum length of 100 characters.
+DECLARE @RedwoodLegacyDeal VARCHAR(100);
+DECLARE @TieredPriceBook2023 VARCHAR(100);
+
+SET @RedwoodNewDeal2024 = '01sO90000008D4xIAE';
+SET @RedwoodLegacyDeal = '01sO90000008D4yIAE';
+SET @TieredPriceBook2023 = '01s3t000004H01QAAS';
 
 Select 
 	Con.ID as Id
 	,CAST('' as nvarchar(2000)) as Error
 
 	,O.OrderId as [SBQQ__Order__c] -- update existing Contract to link to first order for contract
-	,case when Oppty.Pricebook2Id = '01s3t000004H01QAAS' then '01sO90000008D4xIAE' -- replace tiered pricebook with Redwood New Deals 2024 else Redwood Legacy Deals 2024
-	else '01sO90000008D4yIAE' end as [SBQQ__RenewalPricebookId__c]
+	,case when Oppty.Pricebook2Id = @TieredPriceBook2023 then @RedwoodNewDeal2024 -- replace tiered pricebook with Redwood New Deals 2024 else Redwood Legacy Deals 2024
+	else @TieredPriceBook2023 end as [SBQQ__RenewalPricebookId__c]
 	,'' as [SBQQ__AmendmentOpportunityRecordTypeId__c] -- blank out all ammendment opportunity record type IDs
 	,CONCAT_WS('-', con.Id, O.OrderId) as [Contract_Migration_Id__c]
-	,'false' as [SBQQ__PreserveBundleStructureUponRenewals__c]
+	,'false' as [SBQQ__PreserveBundleStructureUponRenewals__c] -- uncheck perserve bundle structure box
 
 	/* ADD IN ANY OTHER UPDATES, IF NEEDED */
 
@@ -130,8 +143,20 @@ where ID = '8003t000008OIF1AAO'
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE StageQA; -- uncheck box
 EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','SANDBOX_QA','Contract_Load'
+
+
+-----
+-- Remove all products from contract renewal opportunity
+-----
+select * from StageQA.dbo.OpportunityLineItem] where 
+
+
+-----
+-- update opportunities with contract renwal pricebook ID
+-----
+
 
 --- check box ---
 

@@ -83,7 +83,7 @@ Select
 ,Sub.[SBQQ__DimensionType__c]
 
 	,QL.SBQQ__DefaultSubscriptionTerm__c
-	,COALESCE(QL.SBQQ__Quantity__c, sub.[Effective_Quantity__c])  as SBQQ__QuotedQuantity__c 
+	,COALESCE(QL.SBQQ__EffectiveQuantity__c, sub.[Effective_Quantity__c])  as SBQQ__QuotedQuantity__c 
 	,COALESCE(PBE.Id, QL.SBQQ__PricebookEntryId__c) AS PricebookEntryId -- There is a pricebook mismatch between the Quote and the Contract parent of this subscription.
 	--,QL.SBQQ__Description__c as [Description] -- Quote line's description is nvarchar(max) and we only have 255 in the standard description field
 	,COALESCE(Sub.SBQQ__Dimension__c, QL.SBQQ__Dimension__c) as SBQQ__PriceDimension__c
@@ -93,8 +93,8 @@ Select
 	,COALESCE(QL.SBQQ__ListPrice__c, sub.SBQQ__ListPrice__c) as SBQQ__QuotedListPrice__c -- , PBE.UnitPrice
 	,COALESCE(QL.SBQQ__NetPrice__c, sub.SBQQ__ListPrice__c,0) as UnitPrice -- , PBE.UnitPrice
 	,COALESCE(QL.SBQQ__NetPrice__c, sub.SBQQ__ListPrice__c,0) as UnitPriceForceOverride__c -- , PBE.UnitPrice
-	,COALESCE(QL.SBQQ__Quantity__c ,sub.[Effective_Quantity__c])  as SBQQ__OrderedQuantity__c
-	,COALESCE(QL.SBQQ__Quantity__c ,sub.[Effective_Quantity__c]) as Quantity
+	,COALESCE(QL.SBQQ__EffectiveQuantity__c ,sub.[Effective_Quantity__c])  as SBQQ__OrderedQuantity__c
+	,COALESCE(QL.SBQQ__EffectiveQuantity__c ,sub.[Effective_Quantity__c]) as Quantity
 	,COALESCE(QL.SBQQ__PricingMethod__c, Sub.SBQQ__PricingMethod__c) AS SBQQ__PricingMethod__c
 	,COALESCE(Sub.SBQQ__ProductSubscriptionType__c, QL.SBQQ__ProductSubscriptionType__c) AS SBQQ__ProductSubscriptionType__c
 	,COALESCE(Sub.SBQQ__ProductOption__c ,QL.SBQQ__ProductOption__c) as SBQQ__ProductOption__c

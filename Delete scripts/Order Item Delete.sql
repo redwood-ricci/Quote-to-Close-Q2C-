@@ -45,6 +45,13 @@ ADD [Sort] int IDENTITY (1,1)
 ---------------------------------------------------------------------------------
 EXEC StageQA.dbo.SF_TableLoader 'Delete','SANDBOX_QA','OrderItem_DELETE'
 
+select Error, count(*)
+--into StageQA.dbo.OrderItem_DELETE2
+from StageQA.dbo.OrderItem_DELETE_Result
+where error not like '%Success%'
+and error  <> 'UNDELETE_FAILED: Entity is not in the recycle bin'
+group by error
+
 select * 
 --into StageQA.dbo.OrderItem_DELETE2
 from StageQA.dbo.OrderItem_DELETE_Result

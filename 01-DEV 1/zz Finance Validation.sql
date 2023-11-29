@@ -12,7 +12,6 @@ group by OpportunityId
 
 select
 ord.*
-,opt.Id
 ,opt.TCV__c
 ,case when ord.order_total = opt.TCV__c then 'same' else 'false' end as same
 from orders ord

@@ -27,12 +27,10 @@ Select
 	CAST('' as nvarchar(255)) as Error,
 	Order_Migration_id__c,
 	CreatedDate as REF_CreatedDate
-	where Order_Migration_id__c not like ''
-
 into StageQA.dbo.Order_DELETE
 from  SourceQA.dbo.[Order]
---where CreatedById = ''
---and Order_Migration_id__c not like ''
+where Order_Migration_id__c not like ''
+--and CreatedById = ''
 order by  id
 
 

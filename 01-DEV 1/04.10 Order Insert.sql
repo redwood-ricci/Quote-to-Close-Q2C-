@@ -234,6 +234,30 @@ where error not like '%success%'
 group by error
 order by num desc
 
+---- check for reloaded when some have duplicate migration ID values
+Select error, count(*) as num from Order_Load_Result a
+where error not like '%success%'
+and error not like '%DUPLICATE_VALUE%'
+group by error
+order by num desc
+
+------ reload any rows that got bounced because of processing time
+select * into Order_Reload from Order_Load where Order_Migration_id__c in (
+select Order_Migration_id__c from Order_Load_Result
+where error not like '%success%'
+and error not like '%DUPLICATE_VALUE%')
+select * from Order_Reload
+
+EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','SANDBOX_QA','Order_Reload'
+
+---- check for errors on reload
+Select error, count(*) as num from Order_Reload_Result a
+where error not like '%success%'
+group by error
+order by num desc
+
+
+
 Select error, * from Order_Load_Result a where error not like '%success%'
 Select top 100 error, * from Order_Load -- a where error like '%Opportunity must have%'
 
