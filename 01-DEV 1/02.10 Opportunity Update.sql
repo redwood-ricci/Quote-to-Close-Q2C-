@@ -18,9 +18,11 @@
 ---------------------------------------------------------------------------------
 USE SourceQA;
 
--- EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Account'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'PriceBook2','pkchunk'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Account'
+--EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'PriceBook2','pkchunk'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Opportunity','pkchunk'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'OpportunityPartner'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Contact'
 -- Add any other objects as needed
 
 
@@ -39,22 +41,39 @@ DROP TABLE StageQA.dbo.[Opportunity_Update]
 Select 
 	O.ID as Id,
 	CAST('' as nvarchar(2000)) as Error,
-	O.AccountID as REF_AccountID,
+	MAX(O.AccountID) as REF_AccountID,
+	MAX(O.PartnerAccountId) as REF_PartnerAccountId,
+	MAX(OP.AccountToId) as PartnerAccountId, 
+	MAX(0+OP.IsPrimary) as REF_IsPrimaryPartner,
+	CASE WHEN MAX(OP.AccountToId) IS NULL THEN 'Direct' ELSE 'Indirect' END  as Opportunity_Channel__c,
+	MAX(PartnerCon.Id) as Partner_Contact__c,
+	MAX(PartnerCon.Name) as REF_PartnerContactName,
+	--PartnerAcc.Name as REF_PartnerAccountName,
 
 -- MIGRATION FIELDS 																						
-	O.ID + '-NEO' as Opp_Migration_id__c
+	MAX(O.ID) + '-NEO' as Opp_Migration_Id__c
 
--- INTO StageQA.dbo.Opportunity_Update
+ INTO StageQA.dbo.Opportunity_Update
 
 FROM SourceQA.dbo.Opportunity O
-INNER JOIN SourceQA.dbo.Account Acct 
-	ON O.AccountID = Acct.ID 
+	INNER JOIN SourceQA.dbo.Account Acct 
+		ON O.AccountID = Acct.ID 
+	LEFT JOIN SourceQA.dbo.OpportunityPartner OP
+		on OP.OpportunityId = O.Id
+		and OP.IsPrimary = 'true'
+	LEFT JOIN SourceQA.dbo.Contact PartnerCon
+		on PartnerCon.AccountId = OP.AccountToId 
+		and PartnerCon.Primary_Contact__c = 'true'
 
--- TBD if this join is needed
-INNER JOIN SourceQA.dbo.Pricebook2 PB 
-	ON O.Pricebook2Id = PB.ID
-	
-ORDER BY Acct.ID
+WHERE O.Opportunity_Channel__c is  null
+	and O.IsClosed = 'false'
+	and O.StageName != 'Closed Lost'
+	and O.StageName != 'Closed Won'
+	and O.SBQQ__Contracted__c = 'false'
+
+GROUP BY O.Id
+
+ORDER BY MAX(Acct.ID)
 
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
@@ -80,6 +99,8 @@ select Opp_Migration_id__c, count(*)
 from StageQA.dbo.[Opportunity_Update]
 group by Opp_Migration_id__c
 having count(*) > 1
+
+select * from StageQA.dbo.[Opportunity_Update]
 
 
 
