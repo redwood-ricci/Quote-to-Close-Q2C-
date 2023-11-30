@@ -81,7 +81,7 @@ Select
 	,'' as [SBQQ__AmendmentOpportunityRecordTypeId__c] -- blank out all ammendment opportunity record type IDs
 	,CONCAT_WS('-', con.Id, O.OrderId) as [Contract_Migration_Id__c]
 	,'false' as [SBQQ__PreserveBundleStructureUponRenewals__c] -- uncheck perserve bundle structure box
-
+	,'false' as SBQQ__RenewalQuoted__c
 	/* ADD IN ANY OTHER UPDATES, IF NEEDED */
 
 	/* REFERENCE FIELDS */
@@ -153,14 +153,83 @@ if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Opportuni
 DROP TABLE StageQA.dbo.OpportunityLineItem_DELETE;
 
 select
-ol.Id,
+	OLI.ID as Id,
+	OLI.SortOrder, 
+	OLI.PricebookEntryId, 
+	OLI.Product2Id, 
+	OLI.ProductCode, 
+	OLI.Name, 
+	OLI.CurrencyIsoCode, 
+	OLI.Quantity, 
+	OLI.Subtotal, 
+	OLI.TotalPrice, 
+	OLI.UnitPrice, 
+	OLI.ListPrice, 
+	OLI.ServiceDate, 
+	OLI.Description, 
+	OLI.CreatedDate, 
+	OLI.CreatedById, 
+	OLI.LastModifiedDate, 
+	OLI.LastModifiedById, 
+	OLI.SystemModstamp, 
+	OLI.IsDeleted, 
+	OLI.LastViewedDate, 
+	OLI.LastReferencedDate, 
+	OLI.Evaluation_Serial__c, 
+	OLI.Evaluation_Expires__c, 
+	OLI.Pak_Size__c, 
+	OLI.Asset__c, 
+	OLI.Power_of_1__c, 
+	OLI.Ratable__c, 
+	OLI.Product_Family__c, 
+	OLI.List_Price_Total__c, 
+	OLI.SBQQ__ParentID__c, 
+	OLI.SBQQ__QuoteLine__c, 
+	OLI.SBQQ__SubscriptionType__c, 
+	OLI.Invoice__c, 
+	OLI.pse__Added_To_Project__c, 
+	OLI.Double_Count__c, 
+	OLI.oldTemplate_Qty_and_Name__c, 
+	OLI.pse__IsServicesProductLine__c, 
+	OLI.Template_Qty_and_Name__c, 
+	OLI.Template_Qty_and_Name3__c, 
+	OLI.sbaa__ApprovalStatus__c, 
+	OLI.End_Date__c, 
+	OLI.FYV_Booking_Billing__c, 
+	OLI.Product_Group__c, 
+	OLI.Renewal_Amount__c, 
+	OLI.Segment_Period__c, 
+	OLI.Start_Date__c, 
+	OLI.Annualized_ARR__c, 
+	OLI.One_Time_Revenue__c, 
+	OLI.Revenue_Type__c, 
+	OLI.Quote_Type__c, 
+	OLI.Uplift_Amount__c, 
+	OLI.Uplift__c,
 CAST('' as nvarchar(255)) as Error
 into OpportunityLineItem_DELETE
-from SourceQA.dbo.OpportunityLineItem ol
-where ol.OpportunityId in ( -- all opportunity line items related to the contract renewals
-	select REF_SBQQ__RenewalOpportunity__c from Contract_Load
-	where REF_SBQQ__RenewalOpportunity__c is not null
-)
+from SourceQA.dbo.OpportunityLineItem OLI
+	INNER JOIN SourceQA.[dbo].Opportunity O
+		on O.ID = OLI.OpportunityID
+	LEFT JOIN SourceQA.dbo.Contract con
+		on con.Id = O.SBQQ__RenewedContract__c
+where (
+			O.IsClosed = 'false'
+			and 
+			(
+				O.Type = 'New Business'
+				or O.Type = 'Renewal Business'
+			)
+			and O.StageName != 'Closed Won'
+			and O.StageName != 'Closed Lost'
+			and O.SBQQ__Contracted__c = 'false'
+		)
+
+
+--OLI.OpportunityId in ( -- all opportunity line items related to the contract renewals
+--	select REF_SBQQ__RenewalOpportunity__c from Contract_Load
+--	where REF_SBQQ__RenewalOpportunity__c is not null
+--)
 
 ALTER TABLE StageQA.dbo.OpportunityLineItem_DELETE
 ADD [Sort] int IDENTITY (1,1)
