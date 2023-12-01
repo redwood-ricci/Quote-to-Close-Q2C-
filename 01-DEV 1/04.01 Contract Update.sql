@@ -141,9 +141,25 @@ where ID = '8003t000008OIF1AAO'
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
+
 USE StageQA; -- uncheck box
 EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','SANDBOX_QA','Contract_Load'
+----- ^^^^^^^^^ 15 records are failing with the error below  ^^^^^^^^^ -----
+--- https://docs.google.com/spreadsheets/d/19x56hjw2SrNQlS0aZpXwjUMAs-kq6NcjJ0pUV8K5tEM/edit?usp=sharing
+-- 
 
+---------------------
+-- inspect contract load errors
+---------------------
+
+select error,count(*)
+from Contract_Load_Result
+where Error not like '%Success%'
+group by Error
+
+select *
+from Contract_Load_Result
+where Error not like '%Success%'
 
 -----
 -- Remove all products from contract renewal opportunity
@@ -154,59 +170,7 @@ DROP TABLE StageQA.dbo.OpportunityLineItem_DELETE;
 
 select
 	OLI.ID as Id,
-	OLI.SortOrder, 
-	OLI.PricebookEntryId, 
-	OLI.Product2Id, 
-	OLI.ProductCode, 
-	OLI.Name, 
-	OLI.CurrencyIsoCode, 
-	OLI.Quantity, 
-	OLI.Subtotal, 
-	OLI.TotalPrice, 
-	OLI.UnitPrice, 
-	OLI.ListPrice, 
-	OLI.ServiceDate, 
-	OLI.Description, 
-	OLI.CreatedDate, 
-	OLI.CreatedById, 
-	OLI.LastModifiedDate, 
-	OLI.LastModifiedById, 
-	OLI.SystemModstamp, 
-	OLI.IsDeleted, 
-	OLI.LastViewedDate, 
-	OLI.LastReferencedDate, 
-	OLI.Evaluation_Serial__c, 
-	OLI.Evaluation_Expires__c, 
-	OLI.Pak_Size__c, 
-	OLI.Asset__c, 
-	OLI.Power_of_1__c, 
-	OLI.Ratable__c, 
-	OLI.Product_Family__c, 
-	OLI.List_Price_Total__c, 
-	OLI.SBQQ__ParentID__c, 
-	OLI.SBQQ__QuoteLine__c, 
-	OLI.SBQQ__SubscriptionType__c, 
-	OLI.Invoice__c, 
-	OLI.pse__Added_To_Project__c, 
-	OLI.Double_Count__c, 
-	OLI.oldTemplate_Qty_and_Name__c, 
-	OLI.pse__IsServicesProductLine__c, 
-	OLI.Template_Qty_and_Name__c, 
-	OLI.Template_Qty_and_Name3__c, 
-	OLI.sbaa__ApprovalStatus__c, 
-	OLI.End_Date__c, 
-	OLI.FYV_Booking_Billing__c, 
-	OLI.Product_Group__c, 
-	OLI.Renewal_Amount__c, 
-	OLI.Segment_Period__c, 
-	OLI.Start_Date__c, 
-	OLI.Annualized_ARR__c, 
-	OLI.One_Time_Revenue__c, 
-	OLI.Revenue_Type__c, 
-	OLI.Quote_Type__c, 
-	OLI.Uplift_Amount__c, 
-	OLI.Uplift__c,
-CAST('' as nvarchar(255)) as Error
+	CAST('' as nvarchar(255)) as Error -- only need ID and a spot for errors to delete an object
 into OpportunityLineItem_DELETE
 from SourceQA.dbo.OpportunityLineItem OLI
 	INNER JOIN SourceQA.[dbo].Opportunity O
@@ -214,35 +178,55 @@ from SourceQA.dbo.OpportunityLineItem OLI
 	LEFT JOIN SourceQA.dbo.Contract con
 		on con.Id = O.SBQQ__RenewedContract__c
 where (
-			O.IsClosed = 'false'
-			and 
-			(
-				O.Type = 'New Business'
-				or O.Type = 'Renewal Business'
-			)
-			and O.StageName != 'Closed Won'
-			and O.StageName != 'Closed Lost'
-			and O.SBQQ__Contracted__c = 'false'
-		)
-
-
---OLI.OpportunityId in ( -- all opportunity line items related to the contract renewals
---	select REF_SBQQ__RenewalOpportunity__c from Contract_Load
---	where REF_SBQQ__RenewalOpportunity__c is not null
---)
+	O.IsClosed = 'false'
+	and O.Type in ('New Business','Renewal Business')
+	and O.StageName not in ('Closed Won','Closed Lost')
+	and O.SBQQ__Contracted__c = 'false'
+	and OLI.OpportunityId in ( -- all opportunity line items related to the contract renewals
+	select REF_SBQQ__RenewalOpportunity__c from Contract_Load
+	where REF_SBQQ__RenewalOpportunity__c is not null )
+)
 
 ALTER TABLE StageQA.dbo.OpportunityLineItem_DELETE
 ADD [Sort] int IDENTITY (1,1)
 
+---- make a stash of the opportunity line items about to be deleted
+-- this can be used to re upload them later
+-- EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','OpportunityLineItem','PKCHUNK'
+
+-- DROP TABLE SourceQA.dbo.OpportunityLineItemStash;
+
+-- drop table OpportunityLineItemStash
+select * 
+into OpportunityLineItemStash
+from SourceQA.dbo.OpportunityLineItem
+where Id in (
+	select Id from StageQA.dbo.OpportunityLineItem_DELETE
+)
+
+-- these should match
+select count(distinct Id) from OpportunityLineItemStash
+select count(distinct Id) from StageQA.dbo.OpportunityLineItem_DELETE
+
 -- execute delete
 EXEC SF_TableLoader 'Delete','[SANDBOX_QA]','OpportunityLineItem_DELETE'
+-- took a ton of time and failed many records: https://oneredwood--qa.sandbox.lightning.force.com/lightning/setup/AsyncApiJobStatus/page?address=%2F750O9000002VVmM%3FsfdcIFrameOrigin%3Dhttps%253A%252F%252Foneredwood--qa.sandbox.lightning.force.com%26clc%3D1
 
 -- scope errors
+select count(*) from SourceQA.dbo.OpportunityLineItem
+select count(*) from SourceQA.dbo.OpportunityLineItem where id in (select id from OpportunityLineItemStash) -- seems like the delete did not work on about 19k records
+
+
 select Error, count(*)
 --into StageQA.dbo.Order_DELETE2
 from StageQA.dbo.OpportunityLineItem_DELETE_Result
 where error not like '%Success%'
 group by error
+
+select *
+from StageQA.dbo.OpportunityLineItem_DELETE_Result
+where error not like '%Success%'
+
 
 -----
 -- update opportunities with contract renwal pricebook ID
@@ -267,13 +251,17 @@ EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(20)','SANDBOX_QA','Opp
 --- check box ---
 
 ----------------
+if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Contract_Bundle_Check_Load' AND TABLE_SCHEMA = 'dbo')
+DROP TABLE StageQA.dbo.Contract_Bundle_Check_Load;
 
 select 
-Con.ID as Id
+cl.ID as Id
 ,CAST('' as nvarchar(2000)) as Error
 ,'true' [SBQQ__PreserveBundleStructureUponRenewals__c]
+into Contract_Bundle_Check_Load
+from Contract_Load cl
 
-
+EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(1)','SANDBOX_QA','Contract_Bundle_Check_Load'
 ---------------------------------------------------------------------------------
 -- Error Review	
 ---------------------------------------------------------------------------------
