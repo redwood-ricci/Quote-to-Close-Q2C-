@@ -33,8 +33,8 @@ EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','PriceBook2','PKCHUNK'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','RecordType','PKCHUNK'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','SBQQ__Quote__c','PKCHUNK'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Opportunity','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Contract','PKCHUNK'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','OpportunityLineItem','PKCHUNK'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Contract','PKCHUNK'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Order','PKCHUNK'
 
 ---------------------------------------------------------------------------------
@@ -75,36 +75,51 @@ Select
 	Con.ID as Id
 	,CAST('' as nvarchar(2000)) as Error
 
-	,O.OrderId as [SBQQ__Order__c] -- update existing Contract to link to first order for contract
-	,case when Oppty.Pricebook2Id = @TieredPriceBook2023 then @RedwoodNewDeal2024 -- replace tiered pricebook with Redwood New Deals 2024 else Redwood Legacy Deals 2024
-	else @TieredPriceBook2023 end as [SBQQ__RenewalPricebookId__c]
-	,'' as [SBQQ__AmendmentOpportunityRecordTypeId__c] -- blank out all ammendment opportunity record type IDs
-	,CONCAT_WS('-', con.Id, O.OrderId) as [Contract_Migration_Id__c]
-	,'false' as [SBQQ__PreserveBundleStructureUponRenewals__c] -- uncheck perserve bundle structure box
-	,'false' as SBQQ__RenewalQuoted__c
+	,MAX(O.OrderId) as [SBQQ__Order__c] -- update existing Contract to link to first order for contract
+	,MAX(Con.SBQQ__RenewalPricebookId__c) as REF_ContractRenewalPricebookId__c
+	,case when MAX(Con.SBQQ__RenewalPricebookId__c) = @TieredPriceBook2023 then @RedwoodNewDeal2024 -- replace tiered pricebook with Redwood New Deals 2024 else Redwood Legacy Deals 2024
+		else @RedwoodLegacyDeal end as [SBQQ__RenewalPricebookId__c]
+	,NULL as [SBQQ__AmendmentOpportunityRecordTypeId__c] -- blank out all ammendment opportunity record type IDs
+	,CONCAT_WS('-', con.Id, MAX(O.OrderId)) as [Contract_Migration_Id__c]
+	,'true' as [SBQQ__PreserveBundleStructureUponRenewals__c] -- uncheck perserve bundle structure box
+	,CASE WHEN MAX(OP.AccountToId) IS NULL THEN 'Direct' ELSE 'Indirect' END  as Opportunity_Channel__c
+	,MAX(PartnerCon.Id) as Partner_Contact__c
+	,MAX(PartnerCon.Name) as REF_PartnerContactName
+	,MAX(OP.AccountToId) as Partner_Account__c
+	,MAX(0+OP.IsPrimary) as REF_IsPrimaryPartner
 	/* ADD IN ANY OTHER UPDATES, IF NEEDED */
 
 	/* REFERENCE FIELDS */
 
-	,Acct.ID as REF_AccountId
-	,Oppty.Id as REF_OpportunityID
-	,Qte.Id as REF_QuoteID
-	,Con.SBQQ__RenewalOpportunity__c as REF_SBQQ__RenewalOpportunity__c
+	,MAX(Acct.ID) as REF_AccountId
+	,MAX(Oppty.Id) as REF_OpportunityID
+	,MAX(Qte.Id) as REF_QuoteID
+	,MAX(Con.SBQQ__RenewalOpportunity__c) as REF_SBQQ__RenewalOpportunity__c
 
 	INTO StageQA.dbo.Contract_Load
 	FROM SourceQA.dbo.[Contract] Con
 	Left join First_Orders O
 		on Con.ID = O.ContractId
-	
 	LEFT JOIN SourceQA.dbo.Account Acct 
 		ON Con.AccountID = Acct.ID 
 	LEFT JOIN SourceQA.dbo.SBQQ__Quote__c Qte 
 		ON Con.SBQQ__Quote__c = Qte.ID
 	LEFT JOIN SourceQA.dbo.Opportunity Oppty 
 		ON Con.[SBQQ__Opportunity__c] = Oppty.ID
+	LEFT JOIN SourceQA.dbo.OpportunityPartner OP
+		on OP.OpportunityId = Oppty.Id
+		and OP.IsPrimary = 'true'
+	LEFT JOIN SourceQA.dbo.Contact PartnerCon
+		on PartnerCon.AccountId = OP.AccountToId 
+		and PartnerCon.Primary_Contact__c = 'true'
 	Where Con.EndDate >= getdate()
 	and Con.Status = 'Activated'
-	ORDER BY Acct.ID;
+	--and Con.[SBQQ__RenewalPricebookId__c] != @RedwoodNewDeal2024 -- should uncomment this
+	--and Con.[SBQQ__RenewalPricebookId__c] != @RedwoodLegacyDeal -- should uncomment this
+
+GROUP BY Con.Id
+	
+ORDER BY MAX(Acct.ID);
 
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
@@ -127,6 +142,8 @@ select ID, count(Contract_Migration_Id__c) -- Change to migrated ID if added to 
 from StageQA.dbo.[Contract_Load]
 group by ID
 having count(*) > 1
+
+select * from StageQA.dbo.[Contract_Load]
 
 /*
 select *
@@ -164,9 +181,15 @@ where Error not like '%Success%'
 -----
 -- Remove all products from contract renewal opportunity
 -----
-
+USE StageQA;
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'OpportunityLineItem_DELETE' AND TABLE_SCHEMA = 'dbo')
 DROP TABLE StageQA.dbo.OpportunityLineItem_DELETE;
+
+DECLARE @RedwoodNewDeal2024 VARCHAR(100);
+DECLARE @RedwoodLegacyDeal VARCHAR(100);
+
+SET @RedwoodNewDeal2024 = '01sO90000008D4xIAE';
+SET @RedwoodLegacyDeal = '01sO90000008D4yIAE';
 
 select
 	OLI.ID as Id,
@@ -182,9 +205,7 @@ where (
 	and O.Type in ('New Business','Renewal Business')
 	and O.StageName not in ('Closed Won','Closed Lost')
 	and O.SBQQ__Contracted__c = 'false'
-	and OLI.OpportunityId in ( -- all opportunity line items related to the contract renewals
-	select REF_SBQQ__RenewalOpportunity__c from Contract_Load
-	where REF_SBQQ__RenewalOpportunity__c is not null )
+	and O.Pricebook2Id not in (@RedwoodNewDeal2024, @RedwoodLegacyDeal)
 )
 
 ALTER TABLE StageQA.dbo.OpportunityLineItem_DELETE
@@ -225,28 +246,58 @@ group by error
 
 select *
 from StageQA.dbo.OpportunityLineItem_DELETE_Result
-where error not like '%Success%'
+where error not like '%ENTITY_IS_DELETED:entity is deleted:--%'
 
 
 -----
 -- update opportunities with contract renwal pricebook ID
 -----
 -- this uses the renewal opportunity and pricebook from the contract load then pushes the pricebook to the renewal opp
-
+USE StageQA;
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Opportunity_Load' AND TABLE_SCHEMA = 'dbo')
 DROP TABLE StageQA.dbo.Opportunity_Load;
 
+DECLARE @RedwoodNewDeal2024 VARCHAR(100); 
+DECLARE @RedwoodLegacyDeal VARCHAR(100);
+DECLARE @TieredPriceBook2023 VARCHAR(100);
+
+SET @RedwoodNewDeal2024 = '01sO90000008D4xIAE';
+SET @RedwoodLegacyDeal = '01sO90000008D4yIAE';
+SET @TieredPriceBook2023 = '01s3t000004H01QAAS';
+
 select 
-REF_SBQQ__RenewalOpportunity__c as Id,
-CONCAT_WS('-',o.Migration_Opportunity__c,REF_SBQQ__RenewalOpportunity__c) as Migration_Opportunity__c, -- just concat the old migration ID with the new one to mark the change
-[SBQQ__RenewalPricebookId__c] as Pricebook2Id
+O.Id as Id,
+O.StageName as REF_StageName,
+O.Pricebook2Id as REF_Pricebook2Id,
+CONCAT_WS('-',o.Migration_Opportunity__c,O.Id) as Migration_Opportunity__c, -- just concat the old migration ID with the new one to mark the change
+case when (O.Pricebook2Id = @TieredPriceBook2023) then @RedwoodNewDeal2024 else @RedwoodLegacyDeal end as Pricebook2Id --coalesce
+
 into Opportunity_Load
-from Contract_Load cl
-left join SourceQA.dbo.Opportunity o on cl.REF_SBQQ__RenewalOpportunity__c = o.Id
-where REF_SBQQ__RenewalOpportunity__c is not null
+from SourceQA.dbo.Opportunity O
+where (
+	O.IsClosed = 'false'
+	and O.Type in ('New Business','Renewal Business')
+	and O.StageName not in ('Closed Won','Closed Lost')
+	and O.SBQQ__Contracted__c = 'false'
+	and O.Pricebook2Id not in (@RedwoodNewDeal2024, @RedwoodLegacyDeal)
+)
+
+----------------Validate------------
+select * from Opportunity_Load
+------------------------------------
 
 USE StageQA;
-EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(20)','SANDBOX_QA','Opportunity_Load'
+EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(5)','SANDBOX_QA','Opportunity_Load'
+
+select Error, count(*)
+--into StageQA.dbo.Order_DELETE2
+from StageQA.dbo.Opportunity_Load_Result
+where error not like '%Success%'
+group by error
+
+select *
+from StageQA.dbo.Opportunity_Load_Result
+where error not like '%Success%'
 								
 --- check box ---
 
@@ -257,9 +308,13 @@ DROP TABLE StageQA.dbo.Contract_Bundle_Check_Load;
 select 
 cl.ID as Id
 ,CAST('' as nvarchar(2000)) as Error
-,'true' [SBQQ__PreserveBundleStructureUponRenewals__c]
+,'false' as SBQQ__RenewalQuoted__c
 into Contract_Bundle_Check_Load
 from Contract_Load cl
+
+----------Validation------------
+select * from Contract_Bundle_Check_Load
+--------------------------------
 
 EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(1)','SANDBOX_QA','Contract_Bundle_Check_Load'
 ---------------------------------------------------------------------------------

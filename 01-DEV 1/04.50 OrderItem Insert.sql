@@ -250,7 +250,7 @@ left join SourceQA.dbo.Invoice__c Inv
 	on Sub.Invoice__c = Inv.ID
 Inner JOIN SourceQA.dbo.[Order]  Ord  -- Must have an order
 	on Ord.ContractId = Con.ID
-	and inv.Billing_Period_Start__c = Ord.EffectiveDate
+	and Sub.SBQQ__SegmentStartDate__c = Ord.EffectiveDate
 left join SourceQA.dbo.[PriceBookEntry] PBE
 	on Sub.SBQQ__Product__c = PBE.Product2ID
 	and Ord.Pricebook2Id = PBE.Pricebook2Id
