@@ -54,7 +54,7 @@ Select
 	CAST('' AS nvarchar(18)) AS [ID]
 	,CAST('' as nvarchar(2000)) as Error
 	,MIN(Con.AccountId) as AccountID
-	,MIN(Con.SBQQ__Opportunity__c) as OpportunityId
+	,MIN(Con.SBQQ__Opportunity__c) as OpportunityId -- maybe add coalesce to add opp id from quote here too
 	--,MAX(coalesce(Qte.SBQQ__Pricebook__c, RO.Pricebook2Id, Con.SBQQ__OpportunityPricebookId__c)) as Pricebook2Id -- STill some nulls. Do we need a default value to coalesce in if nothing is found?
 	,case when MAX(coalesce(Qte.SBQQ__Pricebook__c, RO.Pricebook2Id, Con.SBQQ__OpportunityPricebookId__c)) = @TieredPriceBook2023 then @RedwoodNewDeal2024 -- replace tiered pricebook with Redwood New Deals 2024 else Redwood Legacy Deals 2024
 		else @RedwoodLegacyDeal end as Pricebook2Id
@@ -106,6 +106,10 @@ Select
 	,MIN(Coalesce(Qte.SBQQ__PaymentTerms__c,'Net 30')) as SBQQ__PaymentTerm__c -- Net 30 is the default value on the order object for this.
 	,MIN(Coalesce(Con.SBQQ__RenewalTerm__c,Qte.SBQQ__RenewalTerm__c)) as SBQQ__RenewalTerm__c
 	,MIN(Coalesce(Con.SBQQ__RenewalUpliftRate__c ,Qte.SBQQ__RenewalUpliftRate__c)) as SBQQ__RenewalUpliftRate__c
+	,min(inv.Workday_Contract_Number__c)
+	,min(inv.Workday_Invoice_Id__c)
+	,min(inv.Support_Level__c)
+	,min(inv.Invoice_Type__c) as Invoice_Type__c-- new,renewal,amendment -- need a place to update Type
 
 -- MIGRATION FIELDS 																						
 	,concat(MIN(Con.ID),' - ',MIN(inv.Id))  as Order_Migration_id__c -- needs created on each object. Each object's field should be unique with the object name and migration_id__c at the end to avoid twin field issues. Field should be text, set to unique and external
