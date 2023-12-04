@@ -23,30 +23,51 @@ EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Account'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Opportunity','pkchunk'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'OpportunityPartner'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Contact'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'OpportunityContactRole'
+
 -- Add any other objects as needed
-
-
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
 USE StageQA;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Opportunity_Update' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.[Opportunity_Update]
+DROP TABLE StageQA.dbo.[Opportunity_Update];
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
 ---------------------------------------------------------------------------------
+
+--- Create CTE table for contact roles labeled 'Partner' on opportunities
+with contact_partners_all as (
+select
+cr.*
+,c.AccountId
+,ROW_NUMBER() OVER (PARTITION BY cr.OpportunityId ORDER BY cr.CreatedDate DESC) AS rn
+from SourceQA.dbo.OpportunityContactRole cr
+left join SourceQA.dbo.Contact c on cr.ContactId = c.Id
+where Role like '%Partner%'
+),
+
+contact_partners as (
+select
+OpportunityId
+,ContactId
+,AccountId
+from contact_partners_all where rn = 1
+)
+
+-- select * from contact_partners  where OpportunityId = '0063t000015GWuFAAW'
 
 Select 
 	O.ID as Id,
 	CAST('' as nvarchar(2000)) as Error,
 	MAX(O.AccountID) as REF_AccountID,
 	MAX(O.PartnerAccountId) as REF_PartnerAccountId,
-	MAX(OP.AccountToId) as PartnerAccountId, 
+	MAX(coalesce(OP.AccountToId,cp.AccountId)) as PartnerAccountId,
 	MAX(0+OP.IsPrimary) as REF_IsPrimaryPartner,
 	CASE WHEN MAX(OP.AccountToId) IS NULL THEN 'Direct' ELSE 'Indirect' END  as Opportunity_Channel__c,
-	MAX(PartnerCon.Id) as Partner_Contact__c,
+	MAX(coalesce(PartnerCon.Id,cp.ContactId)) as Partner_Contact__c,
 	MAX(PartnerCon.Name) as REF_PartnerContactName,
 	--PartnerAcc.Name as REF_PartnerAccountName,
 
@@ -64,6 +85,7 @@ FROM SourceQA.dbo.Opportunity O
 	LEFT JOIN SourceQA.dbo.Contact PartnerCon
 		on PartnerCon.AccountId = OP.AccountToId 
 		and PartnerCon.Primary_Contact__c = 'true'
+	LEFT JOIN contact_partners cp on cp.OpportunityId = O.Id
 
 WHERE O.Opportunity_Channel__c is  null
 	and O.IsClosed = 'false'

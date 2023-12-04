@@ -64,7 +64,7 @@ SET [Sort] = OrderRowNumber;
 ---------------------------------------------------------------------------------
 -- Load Subscription Data To Full Sandbox -- 
 ---------------------------------------------------------------------------------
-EXEC [StageQA].dbo.SF_TableLoader 'UPDATE','SANDBOX_QA','OrderItem_Activate_UPDATE' 
+EXEC [StageQA].dbo.SF_TableLoader 'UPDATE:bulkapi,batchsize(200)','SANDBOX_QA','OrderItem_Activate_UPDATE' 
 
 
 ---------------------------------------------------------------------------------
