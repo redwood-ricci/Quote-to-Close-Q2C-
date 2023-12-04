@@ -131,9 +131,13 @@ select * from StageQA.dbo.[Opportunity_Update]
 ---------------------------------------------------------------------------------
 USE StageQA;
 EXEC StageQA.dbo.SF_Tableloader 'UPDATE:Bulkapi,batchsize(1)','SANDBOX_QA','Opportunity_Update'
-
+-- error sheet: https://docs.google.com/spreadsheets/d/1SK1gMkJIFMnfEYF2GdoG0lxQwEzM4j3ASqcbx-SRDA0/edit#gid=293700337
+-------------------^^^^^^^^^^ Link to validation errors ^^^^^^^^^^^^
 ---------------------------------------------------------------------------------
 -- Error Review	
 ---------------------------------------------------------------------------------
 
 Select error, * from Opportunity_Update_Result a where error not like '%success%'
+
+Select error, count(*) from Opportunity_Update_Result
+group by error
