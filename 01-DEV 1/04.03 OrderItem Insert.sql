@@ -233,10 +233,7 @@ Select
 	,Inv.Total_Sales_Tax__c as [SBQQ__TaxAmount__c]
 	,Inv.Workday_Contract_Number__c
 	,Inv.Workday_Invoice_Id__c
-
-
 INTO StageQA.dbo.OrderItem_Load
-
 FROM SourceQA.dbo.SBQQ__Subscription__c Sub
 Inner join SourceQA.dbo.Product2 P2
 	on Sub.[SBQQ__Product__c] = P2.ID
@@ -249,7 +246,7 @@ inner join SourceQA.dbo.[Contract] Con
 left join SourceQA.dbo.Invoice__c Inv
 	on Sub.Invoice__c = Inv.ID
 Inner JOIN SourceQA.dbo.[Order]  Ord  -- Must have an order
-	on Ord.ContractId = Con.ID
+	on Ord.Contract__c = Con.ID -- new custom contract ID column on the contract object
 	and Sub.SBQQ__SegmentStartDate__c = Ord.EffectiveDate
 left join SourceQA.dbo.[PriceBookEntry] PBE
 	on Sub.SBQQ__Product__c = PBE.Product2ID
@@ -258,7 +255,6 @@ left join SourceQA.dbo.[PriceBookEntry] PBE
 
 	--on QL.[SBQQ__PricebookEntryId__c] = PBE.ID
 	--and P2.ID = PBE.Product2ID
-
 Where Con.EndDate >= getdate()
 and Con.Status = 'Activated'
 and COALESCE(PBE.Id, QL.SBQQ__PricebookEntryId__c) != @RedwoodNewDeal2024
@@ -288,7 +284,24 @@ SET [Sort] = OrderRowNumber;
 ---------------------------------------------------------------------------------
 -- Data Validation
 ---------------------------------------------------------------------------------
-select count(*), COUNT(distinct Order_Item_Migration_id__c) from OrderItem_Load
+---- show any duplicated order migration IDs
+select Order_Item_Migration_id__c, count(*) as n from OrderItem_Load
+group by Order_Item_Migration_id__c having count(*) >1
+-- these order migration IDs got duplicated somehow?
+/* a3I3t000003fx3tEAA
+a3I3t000003fx3yEAA
+a3I3t000003fx3wEAA
+a3I3t000003fx3rEAA
+a3IO90000001EDpMAM
+a3I3t000003fx3xEAA
+a3I3t000003fx3uEAA
+a3I3t000003fx3vEAA
+a3I3t000003fx3sEAA
+a3I3t000003fx3qEAA
+a3I3t000003fx3pEAA */
+-- select * from OrderItem_Load where Order_Item_Migration_id__c = 'a3IO90000001EDpMAM'
+
+-- show any cases without a pricebook entry
 select * from StageQA.dbo.OrderItem_Load where PricebookEntryId IS NULL 
 
 -- the opportunity below does not have a quote line for the renewal only MFT server bundle subscription

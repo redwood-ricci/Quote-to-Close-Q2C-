@@ -141,3 +141,6 @@ Select error, * from Opportunity_Update_Result a where error not like '%success%
 
 Select error, count(*) from Opportunity_Update_Result
 group by error
+
+-- https://docs.google.com/spreadsheets/d/1wffRr25qMwfopOwPw4dHHfPOY-8xsXyEJmGrQIUP7lg/edit#gid=1768183546
+-- ^^^^^^^^^^^^^ query can be used to check for exceptions. Check SSMS query tab ^^^^^^^^^^^^^^^^

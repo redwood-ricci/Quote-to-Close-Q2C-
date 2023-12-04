@@ -107,10 +107,10 @@ Select
 	,MIN(Coalesce(Qte.SBQQ__PaymentTerms__c,'Net 30')) as SBQQ__PaymentTerm__c -- Net 30 is the default value on the order object for this.
 	,MIN(Coalesce(Con.SBQQ__RenewalTerm__c,Qte.SBQQ__RenewalTerm__c)) as SBQQ__RenewalTerm__c
 	,MIN(Coalesce(Con.SBQQ__RenewalUpliftRate__c ,Qte.SBQQ__RenewalUpliftRate__c)) as SBQQ__RenewalUpliftRate__c
-	,min(inv.Workday_Contract_Number__c)
-	,min(inv.Workday_Invoice_Id__c)
-	,min(inv.Support_Level__c)
-	,min(inv.Invoice_Type__c) as Invoice_Type__c-- new,renewal,amendment -- need a place to update Type
+	,min(inv.Workday_Contract_Number__c) as Workday_Contract_Number__c
+	,min(inv.Workday_Invoice_Id__c) as Workday_Invoice_Id__c
+	,min(inv.Support_Level__c) as Support_Level__c
+-- 	,min(inv.Invoice_Type__c) as Invoice_Type__c-- new,renewal,amendment -- need a place to update Type
 
 -- MIGRATION FIELDS 																						
 	,concat(MIN(Con.ID),' - ',MIN(inv.Id))  as Order_Migration_id__c -- needs created on each object. Each object's field should be unique with the object name and migration_id__c at the end to avoid twin field issues. Field should be text, set to unique and external
@@ -175,7 +175,7 @@ having count(*) > 1
 select *
  from StageQA.dbo.[Order_Load]
 
- select * from StageQA.dbo.Order_Load_Result where ContractId = '8003t000007wQZiAAM'
+--  select * from StageQA.dbo.Order_Load_Result where ContractId = '8003t000007wQZiAAM'
 
 ---------------------------------------------------------------------------------
 -- Scrub
@@ -226,6 +226,7 @@ USE StageQA;
 ---------------------------------------------------------------------------------
 
 EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(50)','SANDBOX_QA','Order_Load'
+-- 12/04/2023 Zero rows failed :) 
 
 ---------------------------------------------------------------------------------
 -- Error Review	
