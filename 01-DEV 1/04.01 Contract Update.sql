@@ -161,7 +161,7 @@ where ID = '8003t000008OIF1AAO'
 
 USE StageQA; -- uncheck box
 EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','SANDBOX_QA','Contract_Load'
------ ^^^^^^^^^ 15 records are failing with the error below  ^^^^^^^^^ -----
+----- ^^^^^^^^^ 1 records are failing with the error below  ^^^^^^^^^ -----
 --- https://docs.google.com/spreadsheets/d/19x56hjw2SrNQlS0aZpXwjUMAs-kq6NcjJ0pUV8K5tEM/edit?usp=sharing
 -- 
 
@@ -219,14 +219,14 @@ ADD [Sort] int IDENTITY (1,1)
 
 -- drop table OpportunityLineItemStash
 select * 
-into OpportunityLineItemStash
+into OpportunityLineItemStash2
 from SourceQA.dbo.OpportunityLineItem
 where Id in (
 	select Id from StageQA.dbo.OpportunityLineItem_DELETE
 )
 
 -- these should match
-select count(distinct Id) from OpportunityLineItemStash
+select count(distinct Id) from OpportunityLineItemStash2
 select count(distinct Id) from StageQA.dbo.OpportunityLineItem_DELETE
 
 -- execute delete
@@ -235,7 +235,7 @@ EXEC SF_TableLoader 'Delete','[SANDBOX_QA]','OpportunityLineItem_DELETE'
 
 -- scope errors
 select count(*) from SourceQA.dbo.OpportunityLineItem
-select count(*) from SourceQA.dbo.OpportunityLineItem where id in (select id from OpportunityLineItemStash) -- seems like the delete did not work on about 19k records
+select count(*) from SourceQA.dbo.OpportunityLineItem where id in (select id from OpportunityLineItemStash2) -- seems like the delete did not work on about 19k records
 
 
 select Error, count(*)
@@ -283,7 +283,7 @@ where (
 )
 
 ----------------Validate------------
-select * from Opportunity_Load
+select * from Opportunity_Load -- why is this only 16 opportunities?
 ------------------------------------
 
 USE StageQA;
@@ -325,14 +325,12 @@ EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(1)','SANDBOX_QA','Cont
 Select
 error,
 count(*)
-from StageQA.dbo.Contract_Load_Result a where error not like '%success%'
+from StageQA.dbo.Contract_Bundle_Check_Load_Result a where error not like '%success%'
 group by error
 
 Select
-error,
-
-from StageQA.dbo.Contract_Load_Result a where error not like '%success%'
-group by error
+*
+from StageQA.dbo.Contract_Bundle_Check_Load_Result a where error not like '%success%'
 
 
 Select
