@@ -61,6 +61,7 @@ Select
 
 	,MIN(con.SBQQ__Quote__c) as SBQQ__Quote__c
 	,Con.ID as ContractId
+	,Con.Id as Contract__c
 --	,'True' as SBQQ__Contracted__c
 	,MIN('Single Contract') as SBQQ__ContractingMethod__c --Picklist Single Contract or By Subscription End Date --"By Subscription End Date" creates a separate Contract for each unique Subscription End Date, containing only those Subscriptions. "Single Contract" creates one Contract containing all Subscriptions, regardless of their End Dates.
 	,MIN('Draft') as [Status]

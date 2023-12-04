@@ -108,10 +108,10 @@ select * from StageQA.dbo.[Opportunity_Update]
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 USE StageQA;
-EXEC StageQA.dboSF_Tableloader 'UPDATE:Bulkapi,batchsize(10)','SANDBOX_QA','Opportunity_Update'
+EXEC StageQA.dbo.SF_Tableloader 'UPDATE:Bulkapi,batchsize(1)','SANDBOX_QA','Opportunity_Update'
 
 ---------------------------------------------------------------------------------
 -- Error Review	
 ---------------------------------------------------------------------------------
 
--- Select error, * from Opportunity_Update_Result a where error not like '%success%'
+Select error, * from Opportunity_Update_Result a where error not like '%success%'
