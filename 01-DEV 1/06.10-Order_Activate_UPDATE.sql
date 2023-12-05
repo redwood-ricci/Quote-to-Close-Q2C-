@@ -61,12 +61,12 @@ select * from StageQA.dbo.Order_UPDATE
 ---------------------------------------------------------------------------------
 -- Load Subscription Data To Full Sandbox -- 
 ---------------------------------------------------------------------------------
-EXEC StageQA.dbo.SF_TableLoader 'UPDATE:bulkapi,batchsize(100)','SANDBOX_QA','Order_UPDATE'
+EXEC StageQA.dbo.SF_TableLoader 'UPDATE:bulkapi,batchsize(1)','SANDBOX_QA','Order_UPDATE'
 ---------------------------------------------------------------------------------
 --- ERROR REVIEW
 ---------------------------------------------------------------------------------
 Select * from StageQA.dbo.Order_UPDATE_Result where error not like '%Success%'
-
+---------- ^^^^^^^^^^^^^^^ Error sheet https://docs.google.com/spreadsheets/d/13RQYid_LLjGiN16ICKbkwITOvvmd_9LWBcYWktStsn4/edit#gid=528366776
 
 Select error, count(*)
 from StageQA.dbo.Order_UPDATE_Result

@@ -324,6 +324,9 @@ EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(100)','SANDBOX_QA','Or
 Select error, count(*) from StageQA.dbo.OrderItem_Load_Result a where error not like '%success%'
 group by error
 
+--------^^^^^^^^^^^^^^^ Error sheet: https://docs.google.com/spreadsheets/d/13RQYid_LLjGiN16ICKbkwITOvvmd_9LWBcYWktStsn4/edit#gid=1663377357 -------------
+-- 14 errors
+
 -- USE Insert_Database_Name_Here; EXEC SF_Tableloader 'HardDelete:batchsize(10)', 'SANDBOX_QA', 'SBQQ__QuoteL		ine__c_Load_Result'
 select * from StageQA.dbo.OrderItem_Load_Result a where error != 'Operation Successful.'
 select * from StageQA.dbo.OrderItem_Load_Result
