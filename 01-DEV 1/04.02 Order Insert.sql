@@ -63,7 +63,7 @@ Select
  	,Con.ID as ContractId
 	,Con.Id as Contract__c
 --	,'True' as SBQQ__Contracted__c
-	,coalesce(Qte.SBQQ__ContractingMethod__c, 'Single Contract') as SBQQ__ContractingMethod__c --Picklist Single Contract or By Subscription End Date --"By Subscription End Date" creates a separate Contract for each unique Subscription End Date, containing only those Subscriptions. "Single Contract" creates one Contract containing all Subscriptions, regardless of their End Dates.
+	,MIN(coalesce(Qte.SBQQ__ContractingMethod__c, 'Single Contract')) as SBQQ__ContractingMethod__c --Picklist Single Contract or By Subscription End Date --"By Subscription End Date" creates a separate Contract for each unique Subscription End Date, containing only those Subscriptions. "Single Contract" creates one Contract containing all Subscriptions, regardless of their End Dates.
 	,MIN('Draft') as [Status]
 	--,'New' as Type -- Valid options are New, Renewal and Re-Quote as picklist values. None are active in the QA sandbox. If build activates this, the first one created from a quote would be new. If it is a renewal quote, it owould be Renewal
 
@@ -100,8 +100,8 @@ Select
 	--,Inv.CurrencyIsoCode -- this should match the one on the quote?
 	
 	--,case when Qte.SBQQ__Type__c = 'Amendment' and Qte.SBQQ__StartDate__c is not null then Qte.SBQQ__StartDate__c else Con.[StartDate] end as EffectiveDate
-	,MIN(Coalesce((case when (inv.Billing_Period_Start__c < Con.[StartDate] or inv.Billing_Period_Start__c > Con.EndDate) then Con.[StartDate] else inv.Billing_Period_Start__c end), Con.[StartDate])) as EffectiveDate
-	,MAX(Coalesce((case when (inv.Billing_Period_End__c > Con.[EndDate] or inv.Billing_Period_End__c = NULL) then Con.[EndDate] else inv.Billing_Period_End__c end), Qte.SBQQ__EndDate__c)) as EndDate
+	,MIN(Coalesce((case when (Sub.SBQQ__SegmentStartDate__c < Con.[StartDate] or Sub.SBQQ__SegmentStartDate__c > Con.EndDate) then Con.[StartDate] else Sub.SBQQ__SegmentStartDate__c end), Con.[StartDate])) as EffectiveDate
+	,MAX(Coalesce((case when (Sub.SBQQ__SegmentEndDate__c > Con.[EndDate] or Sub.SBQQ__SegmentEndDate__c = NULL) then Con.[EndDate] else Sub.SBQQ__SegmentEndDate__c end), Qte.SBQQ__EndDate__c)) as EndDate
 	,MIN(Con.OwnerId) as OwnerId
 	--,Inv.OwnerId as OwnerId -- Are invoice owners the same as the quote owner or ContractOwner?
 	,MIN(Coalesce(Qte.SBQQ__PaymentTerms__c,'Net 30')) as SBQQ__PaymentTerm__c -- Net 30 is the default value on the order object for this.
@@ -113,7 +113,7 @@ Select
 -- 	,min(inv.Invoice_Type__c) as Invoice_Type__c-- new,renewal,amendment -- need a place to update Type
 
 -- MIGRATION FIELDS 																						
-	,concat(MIN(Con.ID),' - ',MIN(inv.Id))  as Order_Migration_id__c -- needs created on each object. Each object's field should be unique with the object name and migration_id__c at the end to avoid twin field issues. Field should be text, set to unique and external
+	,concat(MIN(Con.ID),' - ',MIN(Sub.Id))  as Order_Migration_id__c -- needs created on each object. Each object's field should be unique with the object name and migration_id__c at the end to avoid twin field issues. Field should be text, set to unique and external
 
 into StageQA.dbo.[Order_Load]
 
@@ -139,7 +139,7 @@ and coalesce(Qte.SBQQ__Pricebook__c, RO.Pricebook2Id, Con.SBQQ__OpportunityPrice
 and coalesce(Qte.SBQQ__Pricebook__c, RO.Pricebook2Id, Con.SBQQ__OpportunityPricebookId__c) != @RedwoodLegacyDeal
 
 group by Con.ID, 
-		Coalesce((case when inv.Billing_Period_Start__c < Con.[StartDate] then Con.[StartDate] else inv.Billing_Period_Start__c end), Con.[StartDate])
+		Coalesce((case when Sub.SBQQ__SegmentStartDate__c < Con.[StartDate] then Con.[StartDate] else Sub.SBQQ__SegmentStartDate__c end), Con.[StartDate])
 
 --Con.ID = '8003t000008D4Z8AAK' --'8003t000008aU32AAE' 
 -- only things that can amend and renew
