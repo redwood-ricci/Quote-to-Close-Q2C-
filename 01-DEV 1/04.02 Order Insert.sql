@@ -60,10 +60,10 @@ Select
 		else @RedwoodLegacyDeal end as Pricebook2Id
 
 	,MIN(con.SBQQ__Quote__c) as SBQQ__Quote__c
--- 	,Con.ID as ContractId
+ 	,Con.ID as ContractId
 	,Con.Id as Contract__c
 --	,'True' as SBQQ__Contracted__c
-	,MIN('Single Contract') as SBQQ__ContractingMethod__c --Picklist Single Contract or By Subscription End Date --"By Subscription End Date" creates a separate Contract for each unique Subscription End Date, containing only those Subscriptions. "Single Contract" creates one Contract containing all Subscriptions, regardless of their End Dates.
+	,coalesce(Qte.SBQQ__ContractingMethod__c, 'Single Contract') as SBQQ__ContractingMethod__c --Picklist Single Contract or By Subscription End Date --"By Subscription End Date" creates a separate Contract for each unique Subscription End Date, containing only those Subscriptions. "Single Contract" creates one Contract containing all Subscriptions, regardless of their End Dates.
 	,MIN('Draft') as [Status]
 	--,'New' as Type -- Valid options are New, Renewal and Re-Quote as picklist values. None are active in the QA sandbox. If build activates this, the first one created from a quote would be new. If it is a renewal quote, it owould be Renewal
 

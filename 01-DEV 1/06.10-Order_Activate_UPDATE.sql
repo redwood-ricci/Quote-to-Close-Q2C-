@@ -25,6 +25,7 @@ USE SourceQA;
 ---------------------------------------------------------------------------------
 
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Order','PkChunk'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','sbqq__Quote__c','PKCHUNK'
 
 ---------------------------------------------------------------------------------
 --- Drop Staging Table
@@ -40,13 +41,17 @@ GO
 --- Create Staging Table
 ---------------------------------------------------------------------------------
 SELECT  
-	ID,
+	O.ID as Id,
 	CAST('' AS nvarchar(255)) AS Error,
-	'Activated' as [Status]
+	'Activated' as [Status],
+	coalesce(Qte.SBQQ__ContractingMethod__c, 'Single Contract') as SBQQ__ContractingMethod__c 
 
 into StageQA.dbo.Order_UPDATE
-FROM  SourceQA.dbo.[Order]
-WHERE Order_Migration_id__c IS NOT NULL
+FROM  SourceQA.dbo.[Order] O
+left join SourceQA.dbo.SBQQ__Quote__c Qte
+	on Qte.Id = O.SBQQ__Quote__c
+WHERE O.Order_Migration_id__c IS NOT NULL
+	and O.Status != 'Activated'
 
 
 
@@ -76,5 +81,5 @@ group by error
 
 
 Select *
-from Order_Activate_Update_result
+from Order_UPDATE_Result
 where error not like '%Success%'
