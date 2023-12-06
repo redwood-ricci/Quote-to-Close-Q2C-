@@ -72,6 +72,7 @@ EXEC StageQA.dbo.SF_TableLoader 'UPDATE:bulkapi,batchsize(1)','SANDBOX_QA','Orde
 ---------------------------------------------------------------------------------
 Select * from StageQA.dbo.Order_UPDATE_Result where error not like '%Success%'
 ---------- ^^^^^^^^^^^^^^^ Error sheet https://docs.google.com/spreadsheets/d/13RQYid_LLjGiN16ICKbkwITOvvmd_9LWBcYWktStsn4/edit#gid=528366776
+-- Only 15 failed, the same 15 that did not get order items uploaded
 
 Select error, count(*)
 from StageQA.dbo.Order_UPDATE_Result

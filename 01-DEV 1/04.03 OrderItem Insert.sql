@@ -113,7 +113,6 @@ Select
 	,QL.SBQQ__UnproratedNetPrice__c
 
 	--ListPrice
-
 	--,SBQQ__ShippingAccount__c
 
 --Subscription
@@ -265,8 +264,10 @@ and COALESCE(PBE.Id, QL.SBQQ__PricebookEntryId__c) != @RedwoodLegacyDeal
 order by Con.Id,
 		Ord.EffectiveDate
 
-
+-- select * from SourceQA.dbo.SBQQ__Subscription__c where SBQQ__Contract__c = '8003t000008aTjCAAU'
+-- select * from OrderItem_Load where SBQQ__Contract__c = '8003t000008aTjCAAU'
 -- select * from SourceQA.dbo.[Order]
+-- select distinct OrderId from OrderItem_Load where SBQQ__Contract__c = '8003t000008aTjCAAU'
 
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
@@ -288,17 +289,8 @@ SET [Sort] = OrderRowNumber;
 select Order_Item_Migration_id__c, count(*) as n from OrderItem_Load
 group by Order_Item_Migration_id__c having count(*) >1
 -- these order migration IDs got duplicated somehow?
-/* a3I3t000003fx3tEAA
-a3I3t000003fx3yEAA
-a3I3t000003fx3wEAA
-a3I3t000003fx3rEAA
-a3IO90000001EDpMAM
-a3I3t000003fx3xEAA
-a3I3t000003fx3uEAA
-a3I3t000003fx3vEAA
-a3I3t000003fx3sEAA
-a3I3t000003fx3qEAA
-a3I3t000003fx3pEAA */
+/* a3IO90000001EDpMAM */
+
 -- select * from OrderItem_Load where Order_Item_Migration_id__c = 'a3IO90000001EDpMAM'
 
 -- show any cases without a pricebook entry
@@ -315,20 +307,37 @@ select * from StageQA.dbo.OrderItem_Load where PricebookEntryId IS NULL
 USE StageQA;
 EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(100)','SANDBOX_QA','OrderItem_Load'
 
+-- retry loading the failed records more slowly
+drop table OrderItem_Load
+select
+* 
+into OrderItem_Load
+from OrderItem_Load_Result 
+where ID is null
+
+Update x
+Set error = ''
+from OrderItem_Load x
+where id is null
+
+Update x
+Set ID = ''
+from OrderItem_Load x
+where id is null
+
+EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(1)','SANDBOX_QA','OrderItem_Load'
 
 ---------------------------------------------------------------------------------
 -- Error Review	
 ---------------------------------------------------------------------------------
-
--- USE Insert_Database_Name_Here; Select error, * from OrderItem_Load_Result a where error not like '%success%'
 Select error, count(*) from StageQA.dbo.OrderItem_Load_Result a where error not like '%success%'
 group by error
 
+select * from StageQA.dbo.OrderItem_Load_Result a where error != 'Operation Successful.'
 --------^^^^^^^^^^^^^^^ Error sheet: https://docs.google.com/spreadsheets/d/13RQYid_LLjGiN16ICKbkwITOvvmd_9LWBcYWktStsn4/edit#gid=1663377357 -------------
 -- 14 errors
 
 -- USE Insert_Database_Name_Here; EXEC SF_Tableloader 'HardDelete:batchsize(10)', 'SANDBOX_QA', 'SBQQ__QuoteL		ine__c_Load_Result'
-select * from StageQA.dbo.OrderItem_Load_Result a where error != 'Operation Successful.'
 select * from StageQA.dbo.OrderItem_Load_Result
 select * from StageQA.dbo.OrderItem_Load
 

@@ -33,6 +33,7 @@ EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Invoice__c','PKCHUNK'
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
+
 USE StageQA;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Order_Load' AND TABLE_SCHEMA = 'dbo')
@@ -101,7 +102,7 @@ Select
 	
 	--,case when Qte.SBQQ__Type__c = 'Amendment' and Qte.SBQQ__StartDate__c is not null then Qte.SBQQ__StartDate__c else Con.[StartDate] end as EffectiveDate
 	,MIN(Coalesce((case when (Sub.SBQQ__SegmentStartDate__c < Con.[StartDate] or Sub.SBQQ__SegmentStartDate__c > Con.EndDate) then Con.[StartDate] else Sub.SBQQ__SegmentStartDate__c end), Con.[StartDate])) as EffectiveDate
-	,MAX(Coalesce((case when (Sub.SBQQ__SegmentEndDate__c > Con.[EndDate] or Sub.SBQQ__SegmentEndDate__c = NULL) then Con.[EndDate] else Sub.SBQQ__SegmentEndDate__c end), Qte.SBQQ__EndDate__c)) as EndDate
+	,MAX(Coalesce((case when (Sub.SBQQ__SegmentEndDate__c > Con.[EndDate] or Sub.SBQQ__SegmentEndDate__c is NULL) then Con.[EndDate] else Sub.SBQQ__SegmentEndDate__c end), Qte.SBQQ__EndDate__c)) as EndDate
 	,MIN(Con.OwnerId) as OwnerId
 	--,Inv.OwnerId as OwnerId -- Are invoice owners the same as the quote owner or ContractOwner?
 	,MIN(Coalesce(Qte.SBQQ__PaymentTerms__c,'Net 30')) as SBQQ__PaymentTerm__c -- Net 30 is the default value on the order object for this.
@@ -139,13 +140,12 @@ and coalesce(Qte.SBQQ__Pricebook__c, RO.Pricebook2Id, Con.SBQQ__OpportunityPrice
 and coalesce(Qte.SBQQ__Pricebook__c, RO.Pricebook2Id, Con.SBQQ__OpportunityPricebookId__c) != @RedwoodLegacyDeal
 
 group by Con.ID, 
-		Coalesce((case when Sub.SBQQ__SegmentStartDate__c < Con.[StartDate] then Con.[StartDate] else Sub.SBQQ__SegmentStartDate__c end), Con.[StartDate])
+		Coalesce((case when (Sub.SBQQ__SegmentStartDate__c < Con.[StartDate] or Sub.SBQQ__SegmentStartDate__c > Con.EndDate) then Con.[StartDate] else Sub.SBQQ__SegmentStartDate__c end), Con.[StartDate]) -- change to match EffectiveDate
 
 --Con.ID = '8003t000008D4Z8AAK' --'8003t000008aU32AAE' 
 -- only things that can amend and renew
 order by Con.ID,
-		EffectiveDate
-
+		 EffectiveDate
 
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
@@ -159,9 +159,10 @@ WITH NumberedRows AS (
 )
 UPDATE NumberedRows
 SET [Sort] = OrderRowNumber;
-SELECT *
-FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_NAME = 'Order_Load';
+
+-- SELECT *
+-- FROM INFORMATION_SCHEMA.COLUMNS
+-- WHERE TABLE_NAME = 'Order_Load';
 
 
 ---------------------------------------------------------------------------------
@@ -226,7 +227,8 @@ USE StageQA;
 ---------------------------------------------------------------------------------
 
 EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(50)','SANDBOX_QA','Order_Load'
--- 12/04/2023 Zero rows failed :) 
+-- Error rows: https://docs.google.com/spreadsheets/d/13RQYid_LLjGiN16ICKbkwITOvvmd_9LWBcYWktStsn4/edit#gid=0
+-- one error where subscription start date is after segment end date
 
 ---------------------------------------------------------------------------------
 -- Error Review	
@@ -246,6 +248,9 @@ where error not like '%success%'
 and error not like '%DUPLICATE_VALUE%'
 group by error
 order by num desc
+
+Select * from Order_Load_Result a
+where error not like '%success%'
 
 ------ reload any rows that got bounced because of processing time
 select * into Order_Reload from Order_Load where Order_Migration_id__c in (

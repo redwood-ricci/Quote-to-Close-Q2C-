@@ -17,6 +17,10 @@
 -- Replicate Data
 ---------------------------------------------------------------------------------
 USE SourceQA;
+-- turn off email delivery here before running this script set to System email only: 
+-- https://oneredwood--qa.sandbox.lightning.force.com/lightning/setup/OrgEmailSettings/home
+
+
 
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Account'
 --EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'PriceBook2','pkchunk'
