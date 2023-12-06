@@ -136,8 +136,8 @@ left join SourceQA.dbo.Account Acct
 Where EndDate >= getdate()
 and Status = 'Activated'
 and Acct.Test_Account__c = 'false'
-and coalesce(Qte.SBQQ__Pricebook__c, RO.Pricebook2Id, Con.SBQQ__OpportunityPricebookId__c) != @RedwoodNewDeal2024
-and coalesce(Qte.SBQQ__Pricebook__c, RO.Pricebook2Id, Con.SBQQ__OpportunityPricebookId__c) != @RedwoodLegacyDeal
+and Con.[SBQQ__Order__c] is not null
+
 
 group by Con.ID, 
 		Coalesce((case when (Sub.SBQQ__SegmentStartDate__c < Con.[StartDate] or Sub.SBQQ__SegmentStartDate__c > Con.EndDate) then Con.[StartDate] else Sub.SBQQ__SegmentStartDate__c end), Con.[StartDate]) -- change to match EffectiveDate

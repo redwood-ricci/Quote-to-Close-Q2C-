@@ -251,13 +251,13 @@ left join SourceQA.dbo.[PriceBookEntry] PBE
 	on Sub.SBQQ__Product__c = PBE.Product2ID
 	and Ord.Pricebook2Id = PBE.Pricebook2Id
 	and Ord.CurrencyIsoCode = PBE.CurrencyIsoCode
-
 	--on QL.[SBQQ__PricebookEntryId__c] = PBE.ID
 	--and P2.ID = PBE.Product2ID
 Where Con.EndDate >= getdate()
 and Con.Status = 'Activated'
-and COALESCE(PBE.Id, QL.SBQQ__PricebookEntryId__c) != @RedwoodNewDeal2024
-and COALESCE(PBE.Id, QL.SBQQ__PricebookEntryId__c) != @RedwoodLegacyDeal
+and Ord.Order_Migration_id__c is not null
+
+-- and Inv.Test_Account__c = 'false'
 --and COALESCE(QL.SBQQ__PricebookEntryId__c, PBE.Id) IS NULL
 -- and Con.Id = '8003t000008D4idAAC'
 
