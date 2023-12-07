@@ -136,7 +136,7 @@ left join SourceQA.dbo.Account Acct
 Where EndDate >= getdate()
 and Status = 'Activated'
 and Acct.Test_Account__c = 'false'
-and Con.[SBQQ__Order__c] is not null
+-- and Con.[SBQQ__Order__c] is not null
 
 
 group by Con.ID, 
@@ -164,6 +164,7 @@ SET [Sort] = OrderRowNumber;
 -- FROM INFORMATION_SCHEMA.COLUMNS
 -- WHERE TABLE_NAME = 'Order_Load';
 
+-- select * from StageQA.dbo.[Order_Load]
 
 ---------------------------------------------------------------------------------
 -- Validations
