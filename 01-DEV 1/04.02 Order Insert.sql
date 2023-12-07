@@ -121,11 +121,10 @@ into StageQA.dbo.[Order_Load]
 FROM SourceQA.dbo.[Contract] Con
 left join SourceQA.dbo.Invoice__c inv
 	on inv.Related_Contract__c = Con.Id
-left join SourceQA.dbo.SBQQ__Subscription__c Sub
+inner join SourceQA.dbo.SBQQ__Subscription__c Sub
 	on Sub.SBQQ__Contract__c = Con.Id
 left join SourceQA.dbo.SBQQ__Quote__c Qte
 	on Qte.ID = Con.SBQQ__Quote__c 
---	or Qte.ID = 
 left join SourceQA.dbo.Opportunity O
 	on Con.SBQQ__Opportunity__c = O.ID
 left join SourceQA.dbo.Opportunity RO -- When Opportunity & Quote are missing on Contract, we are using the Renewal Opportunity to get the PriceBookId
@@ -135,8 +134,9 @@ left join SourceQA.dbo.Account Acct
 
 Where EndDate >= getdate()
 and Status = 'Activated'
-and Acct.Test_Account__c = 'false'
--- and Con.[SBQQ__Order__c] is not null
+and Acct.Test_Account__c = 'false' 
+and Con.[SBQQ__Order__c] is null
+and O.SBQQ__Ordered__c = 'false'
 
 
 group by Con.ID, 

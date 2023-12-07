@@ -66,7 +66,7 @@ select * from StageQA.dbo.Order_UPDATE
 ---------------------------------------------------------------------------------
 -- Load Subscription Data To Full Sandbox -- 
 ---------------------------------------------------------------------------------
-EXEC StageQA.dbo.SF_TableLoader 'UPDATE:bulkapi,batchsize(1)','SANDBOX_QA','Order_UPDATE'
+EXEC StageQA.dbo.SF_TableLoader 'UPDATE:bulkapi,batchsize(5)','SANDBOX_QA','Order_UPDATE'
 ---------------------------------------------------------------------------------
 --- ERROR REVIEW
 ---------------------------------------------------------------------------------

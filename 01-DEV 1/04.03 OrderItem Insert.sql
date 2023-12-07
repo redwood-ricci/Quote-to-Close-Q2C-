@@ -18,6 +18,7 @@
 	USE SourceQA;
 
 	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Order','PKCHUNK'
+	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'OrderItem','PKCHUNK'
 	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Product2','PKCHUNK'
 	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'PriceBook2','PKCHUNK'
 	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'PriceBookEntry','PKCHUNK'
@@ -26,7 +27,6 @@
 	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'SBQQ__QuoteLine__c','PKCHUNK'
 	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'SBQQ__Subscription__c','PKCHUNK'
 	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Contract' ,'PKCHUNK'
-	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'OrderItem','PKCHUNK'
 	EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'SBQQ__ProductOption__c','PKCHUNK'
 	---------------------------------------------------------------------------------
 	-- some data checks
@@ -246,9 +246,17 @@ left join SourceQA.dbo.Invoice__c Inv
 	on Sub.Invoice__c = Inv.ID
 Inner JOIN SourceQA.dbo.[Order]  Ord  -- Must have an order
 	on Ord.Contract__c = Con.ID -- new custom contract ID column on the contract object
-	and Sub.SBQQ__SegmentStartDate__c = Ord.EffectiveDate
+	and Ord.EffectiveDate = 
+		(case when 
+				(COALESCE(Sub.SBQQ__SegmentStartDate__c, Sub.SBQQ__StartDate__c) < Con.[StartDate] or 
+				COALESCE(Sub.SBQQ__SegmentStartDate__c, Sub.SBQQ__StartDate__c) > Con.EndDate) 
+			then 
+				Con.[StartDate] 
+			else 
+				COALESCE(Sub.SBQQ__SegmentStartDate__c, Sub.SBQQ__StartDate__c) 
+		end)
 left join SourceQA.dbo.[PriceBookEntry] PBE
-	on Sub.SBQQ__Product__c = PBE.Product2ID
+	on Sub.[SBQQ__Product__c] = PBE.Product2ID
 	and Ord.Pricebook2Id = PBE.Pricebook2Id
 	and Ord.CurrencyIsoCode = PBE.CurrencyIsoCode
 	--on QL.[SBQQ__PricebookEntryId__c] = PBE.ID
@@ -256,6 +264,7 @@ left join SourceQA.dbo.[PriceBookEntry] PBE
 Where Con.EndDate >= getdate()
 and Con.Status = 'Activated'
 and Ord.Order_Migration_id__c is not null
+and Ord.Status != 'Activated'
 
 -- and Inv.Test_Account__c = 'false'
 --and COALESCE(QL.SBQQ__PricebookEntryId__c, PBE.Id) IS NULL
