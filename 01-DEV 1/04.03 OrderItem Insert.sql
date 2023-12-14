@@ -213,7 +213,7 @@ Select
 	,Inv.Related_Opportunity__c
 	,Inv.Related_Opportunity_Id__c
 	,Inv.RW_Account_Id__c
-	,Inv.RW_Invoice_Number__c
+	,Inv.RW_Invoice_Number__c as RW_Invoice_Number__c
 	,Inv.RW_Order_Form_Number__c
 	,Inv.Sales_Tax_Amount__c
 	,Inv.Sales_Tax_Rate__c
@@ -268,7 +268,7 @@ and Ord.Status != 'Activated'
 
 -- and Inv.Test_Account__c = 'false'
 --and COALESCE(QL.SBQQ__PricebookEntryId__c, PBE.Id) IS NULL
--- and Con.Id = '8003t000008D4idAAC'
+ --and Con.Id = '8003t000008OKSVAA4'
 
 order by Con.Id,
 		Ord.EffectiveDate
@@ -300,7 +300,7 @@ group by Order_Item_Migration_id__c having count(*) >1
 -- these order migration IDs got duplicated somehow?
 /* a3IO90000001EDpMAM */
 
--- select * from OrderItem_Load where Order_Item_Migration_id__c = 'a3IO90000001EDpMAM'
+ select * from OrderItem_Load where Order_Item_Migration_id__c = 'a3I3t000003Shi7EAC'
 
 -- show any cases without a pricebook entry
 select * from StageQA.dbo.OrderItem_Load where PricebookEntryId IS NULL 
@@ -314,7 +314,7 @@ select * from StageQA.dbo.OrderItem_Load where PricebookEntryId IS NULL
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 USE StageQA;
-EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(100)','SANDBOX_QA','OrderItem_Load'
+EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(50)','SANDBOX_QA','OrderItem_Load'
 
 -- retry loading the failed records more slowly
 drop table OrderItem_Load
@@ -341,6 +341,9 @@ EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(1)','SANDBOX_QA','Orde
 ---------------------------------------------------------------------------------
 Select error, count(*) from StageQA.dbo.OrderItem_Load_Result a where error not like '%success%'
 group by error
+
+Select * from OrderItem_Load_Result a
+where error not like '%DUPLICATE_VALUE%' and error not like 'Operation Successful.' and error not like 'UNABLE_TO_LOCK_ROW:unable to obtain exclusive access to this record:--'
 
 select * from StageQA.dbo.OrderItem_Load_Result a where error != 'Operation Successful.'
 --------^^^^^^^^^^^^^^^ Error sheet: https://docs.google.com/spreadsheets/d/13RQYid_LLjGiN16ICKbkwITOvvmd_9LWBcYWktStsn4/edit#gid=1663377357 -------------

@@ -23,6 +23,7 @@ USE SourceQA;
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Account','PKCHUNK'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','PriceBook2','PKCHUNK'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','sbqq__Quote__c','PKCHUNK'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','SBQQ__Quoteline__c','PKCHUNK'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Opportunity','PKCHUNK'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Contract','PKCHUNK'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Order','PKCHUNK'
@@ -43,6 +44,7 @@ DROP TABLE StageQA.dbo.[Order_Load]
 -- Create Staging Table
 ---------------------------------------------------------------------------------
 -- select primary from SourceQA.dbo.Opportunity where id = '0063t000012TzCQAA0'
+
 DECLARE @RedwoodNewDeal2024 VARCHAR(100); -- Declares a string variable with a maximum length of 100 characters.
 DECLARE @RedwoodLegacyDeal VARCHAR(100);
 DECLARE @TieredPriceBook2023 VARCHAR(100);
@@ -51,86 +53,128 @@ SET @RedwoodNewDeal2024 = '01sO90000008D4xIAE';
 SET @RedwoodLegacyDeal = '01sO90000008D4yIAE';
 SET @TieredPriceBook2023 = '01s3t000004H01QAAS';
 
+WITH Contract_Subscription_Match as (
+--Join Subscription with ContractId and each subscription with the corresponding SegementStartDate if its within the Contract Start or End Date, else use the Contract Start Date
+	Select 
+		Con.Id as ContractId,
+		Sub.Id as SubscriptionId,
+		Coalesce(
+				(case 
+					when(Sub.SBQQ__SegmentStartDate__c < Con.[StartDate] or Sub.SBQQ__SegmentStartDate__c > Con.EndDate) then Con.[StartDate] 
+					else Sub.SBQQ__SegmentStartDate__c end), Con.[StartDate]) as SubscriptionStartDate,
+		Year(Coalesce(
+				(case 
+					when(Sub.SBQQ__SegmentStartDate__c < Con.[StartDate] or Sub.SBQQ__SegmentStartDate__c > Con.EndDate) then Con.[StartDate] 
+					else Sub.SBQQ__SegmentStartDate__c end), Con.[StartDate])) as SubYear
+
+	from SourceQA.dbo.Sbqq__Subscription__c Sub
+		left join SourceQA.dbo.Contract Con
+			on Sub.Sbqq__Contract__c = Con.Id
+		left join SourceQA.dbo.Account Acct
+			on Acct.Id = Con.AccountId
+	where EndDate >= getdate()
+		and Status = 'Activated'
+		and Acct.Test_Account__c = 'false' 
+		and Con.[SBQQ__Order__c] is null
+),
+Ranked_Subscription as (
+--Partition by ContractId & Year to get distinct records.
+--Assuming a 3 year Contract, we need 3 orders.
+	Select *, ROW_NUMBER() OVER (PARTITION BY ContractId, SubYear ORDER BY SubscriptionStartDate) as RowNum from Contract_Subscription_Match
+),
+Yearly_Subscriptions_By_Contract as(
+	Select * from Ranked_Subscription where RowNum = 1
+)
+
 Select
 	CAST('' AS nvarchar(18)) AS [ID]
 	,CAST('' as nvarchar(2000)) as Error
-	,MIN(Con.AccountId) as AccountID
-	,MIN(Con.SBQQ__Opportunity__c) as OpportunityId -- maybe add coalesce to add opp id from quote here too
-	--,MAX(coalesce(Qte.SBQQ__Pricebook__c, RO.Pricebook2Id, Con.SBQQ__OpportunityPricebookId__c)) as Pricebook2Id -- STill some nulls. Do we need a default value to coalesce in if nothing is found?
-	,case when MAX(coalesce(Qte.SBQQ__Pricebook__c, RO.Pricebook2Id, Con.SBQQ__OpportunityPricebookId__c)) = @TieredPriceBook2023 then @RedwoodNewDeal2024 -- replace tiered pricebook with Redwood New Deals 2024 else Redwood Legacy Deals 2024
+	,(Con.AccountId) as AccountID
+	,case when (coalesce(Qte.SBQQ__Pricebook__c, RO.Pricebook2Id, Con.SBQQ__OpportunityPricebookId__c)) = @TieredPriceBook2023 then @RedwoodNewDeal2024 -- replace tiered pricebook with Redwood New Deals 2024 else Redwood Legacy Deals 2024
 		else @RedwoodLegacyDeal end as Pricebook2Id
+	, case when (LineQte.Id) IS NOT NULL then (LineQte.SBQQ__Opportunity2__c) else (con.SBQQ__Opportunity__c) end as OpportunityId
+	, case when (LineQte.Id) IS NOT NULL then (LineQte.Id) else (con.SBQQ__Quote__c) end as SBQQ__Quote__c
 
-	,MIN(con.SBQQ__Quote__c) as SBQQ__Quote__c
+	--,(coalesce(LineQte.Id, con.SBQQ__Quote__c)) as SBQQ__Quote__c
  	,Con.ID as ContractId
 	,Con.Id as Contract__c
 --	,'True' as SBQQ__Contracted__c
-	,MIN(coalesce(Qte.SBQQ__ContractingMethod__c, 'Single Contract')) as SBQQ__ContractingMethod__c --Picklist Single Contract or By Subscription End Date --"By Subscription End Date" creates a separate Contract for each unique Subscription End Date, containing only those Subscriptions. "Single Contract" creates one Contract containing all Subscriptions, regardless of their End Dates.
-	,MIN('Draft') as [Status]
+	,(coalesce(Qte.SBQQ__ContractingMethod__c, 'Single Contract')) as SBQQ__ContractingMethod__c --Picklist Single Contract or By Subscription End Date --"By Subscription End Date" creates a separate Contract for each unique Subscription End Date, containing only those Subscriptions. "Single Contract" creates one Contract containing all Subscriptions, regardless of their End Dates.
+	,('Draft') as [Status]
 	--,'New' as Type -- Valid options are New, Renewal and Re-Quote as picklist values. None are active in the QA sandbox. If build activates this, the first one created from a quote would be new. If it is a renewal quote, it owould be Renewal
 
 --SUBSCRIPTION FIEDS
 	-- ,inv.Subscription_Start_Date__c as SubStartDate
 
 --TWIN FIELDS
-	,MIN(Con.Annual_Increase_Cap_Percentage__c)  as Annual_Increase_Cap_Percentage__c
-	,MIN(Con.Annual_Increase_Cap_Term__c) as Annual_Increase_Cap_Term__c
+	,(Con.Annual_Increase_Cap_Percentage__c)  as Annual_Increase_Cap_Percentage__c
+	,(Con.Annual_Increase_Cap_Term__c) as Annual_Increase_Cap_Term__c
 	/* ADD OTHERS BASED ON BUILD AND ADD THEM HERE*/
 
 
 -- ADDRESSES
-	,MIN(dbo.scrub_address(Coalesce(Qte.SBQQ__BillingStreet__c	,Con.[BillingStreet]		))) as BillingStreet
-	,MIN(dbo.scrub_address(Coalesce(Qte.SBQQ__BillingCity__c		,Con.[BillingCity]			))) as BillingCity
-	,MIN(dbo.scrub_address(Coalesce(Qte.SBQQ__BillingState__c		,Con.[BillingState]			))) as BillingState
-	,MIN(dbo.scrub_address(Coalesce(Qte.SBQQ__BillingPostalCode__c,Con.[BillingPostalCode]	))) as BillingPostalCode
-	,MIN(dbo.scrub_address(Coalesce(Qte.SBQQ__BillingCountry__c	,Con.[BillingCountry]))) as BillingCountry
-	,MIN(Acct.BillingStreet) as REF_AccountBillingStreet
-	,MIN(Acct.BillingCity) as REF_AccountBillingCity
-	,MIN(Acct.BillingState) as REF_AccountBillingState
-	,MIN(Acct.BillingPostalCode) as REF_AccountBillingPostalCode
-	,MIN(Acct.BillingCountry) as REF_AccountBillingCountry
+	,(dbo.scrub_address(Coalesce(Qte.SBQQ__BillingStreet__c	,Con.[BillingStreet]		))) as BillingStreet
+	,(dbo.scrub_address(Coalesce(Qte.SBQQ__BillingCity__c		,Con.[BillingCity]			))) as BillingCity
+	,(dbo.scrub_address(Coalesce(Qte.SBQQ__BillingState__c		,Con.[BillingState]			))) as BillingState
+	,(dbo.scrub_address(Coalesce(Qte.SBQQ__BillingPostalCode__c,Con.[BillingPostalCode]	))) as BillingPostalCode
+	,(dbo.scrub_address(Coalesce(Qte.SBQQ__BillingCountry__c	,Con.[BillingCountry]))) as BillingCountry
+	,(Acct.BillingStreet) as REF_AccountBillingStreet
+	,(Acct.BillingCity) as REF_AccountBillingCity
+	,(Acct.BillingState) as REF_AccountBillingState
+	,(Acct.BillingPostalCode) as REF_AccountBillingPostalCode
+	,(Acct.BillingCountry) as REF_AccountBillingCountry
 
-	,dbo.scrub_address(MIN(Coalesce(Qte.SBQQ__ShippingStreet__c		,Con.[ShippingStreet]		))) as [ShippingStreet]
-	,dbo.scrub_address(MIN(Coalesce(Qte.SBQQ__ShippingCity__c			,Con.[ShippingCity]		))	) as [ShippingCity]
-	,dbo.scrub_address(MIN(Coalesce(Qte.SBQQ__ShippingState__c		,Con.[ShippingState]		))) as [ShippingState]
-	,dbo.scrub_address(MIN(Coalesce(Qte.SBQQ__ShippingPostalCode__c	,Con.[ShippingPostalCode]))) as [ShippingPostalCode]
-	,dbo.scrub_address(MIN(Coalesce(Qte.SBQQ__ShippingCountry__c 		,Con.[ShippingCountry]))	) as [ShippingCountry]
+	,dbo.scrub_address((Coalesce(Qte.SBQQ__ShippingStreet__c		,Con.[ShippingStreet]		))) as [ShippingStreet]
+	,dbo.scrub_address((Coalesce(Qte.SBQQ__ShippingCity__c			,Con.[ShippingCity]		))	) as [ShippingCity]
+	,dbo.scrub_address((Coalesce(Qte.SBQQ__ShippingState__c		,Con.[ShippingState]		))) as [ShippingState]
+	,dbo.scrub_address((Coalesce(Qte.SBQQ__ShippingPostalCode__c	,Con.[ShippingPostalCode]))) as [ShippingPostalCode]
+	,dbo.scrub_address((Coalesce(Qte.SBQQ__ShippingCountry__c 		,Con.[ShippingCountry]))	) as [ShippingCountry]
 
-	,MIN(Con.CreatedById) as CreatedById -- Requires a permission set to allow migration user to touch audit fields --https://help.salesforce.com/s/articleView?id=000386875&language=en_US&type=1
+	,(Con.CreatedById) as CreatedById -- Requires a permission set to allow migration user to touch audit fields --https://help.salesforce.com/s/articleView?id=000386875&language=en_US&type=1
 	-- do we want the createddate to match the contract or quote?
-	,MIN(Con.CurrencyIsoCode) as CurrencyIsoCode
+	,(Con.CurrencyIsoCode) as CurrencyIsoCode
 	--,Inv.CurrencyIsoCode -- this should match the one on the quote?
 	
 	--,case when Qte.SBQQ__Type__c = 'Amendment' and Qte.SBQQ__StartDate__c is not null then Qte.SBQQ__StartDate__c else Con.[StartDate] end as EffectiveDate
-	,MIN(Coalesce((case when (Sub.SBQQ__SegmentStartDate__c < Con.[StartDate] or Sub.SBQQ__SegmentStartDate__c > Con.EndDate) then Con.[StartDate] else Sub.SBQQ__SegmentStartDate__c end), Con.[StartDate])) as EffectiveDate
-	,MAX(Coalesce((case when (Sub.SBQQ__SegmentEndDate__c > Con.[EndDate] or Sub.SBQQ__SegmentEndDate__c is NULL) then Con.[EndDate] else Sub.SBQQ__SegmentEndDate__c end), Qte.SBQQ__EndDate__c)) as EndDate
-	,MIN(Con.OwnerId) as OwnerId
+	,(Coalesce((case when (Sub.SBQQ__SegmentStartDate__c < Con.[StartDate] or Sub.SBQQ__SegmentStartDate__c > Con.EndDate) then Con.[StartDate] else Sub.SBQQ__SegmentStartDate__c end), Con.[StartDate])) as EffectiveDate
+	,(Coalesce((case when (Sub.SBQQ__SegmentEndDate__c > Con.[EndDate] or Sub.SBQQ__SegmentEndDate__c is NULL) then Con.[EndDate] else Sub.SBQQ__SegmentEndDate__c end), Qte.SBQQ__EndDate__c)) as EndDate
+	,(Con.OwnerId) as OwnerId
 	--,Inv.OwnerId as OwnerId -- Are invoice owners the same as the quote owner or ContractOwner?
-	,MIN(Coalesce(Qte.SBQQ__PaymentTerms__c,'Net 30')) as SBQQ__PaymentTerm__c -- Net 30 is the default value on the order object for this.
-	,MIN(Coalesce(Con.SBQQ__RenewalTerm__c,Qte.SBQQ__RenewalTerm__c)) as SBQQ__RenewalTerm__c
-	,MIN(Coalesce(Con.SBQQ__RenewalUpliftRate__c ,Qte.SBQQ__RenewalUpliftRate__c)) as SBQQ__RenewalUpliftRate__c
-	,min(inv.Workday_Contract_Number__c) as Workday_Contract_Number__c
-	,min(inv.Workday_Invoice_Id__c) as Workday_Invoice_Id__c
-	,min(inv.Support_Level__c) as Support_Level__c
--- 	,min(inv.Invoice_Type__c) as Invoice_Type__c-- new,renewal,amendment -- need a place to update Type
+	,(Coalesce(Qte.SBQQ__PaymentTerms__c,'Net 30')) as SBQQ__PaymentTerm__c -- Net 30 is the default value on the order object for this.
+	,(Coalesce(Con.SBQQ__RenewalTerm__c,Qte.SBQQ__RenewalTerm__c)) as SBQQ__RenewalTerm__c
+	,(Coalesce(Con.SBQQ__RenewalUpliftRate__c ,Qte.SBQQ__RenewalUpliftRate__c)) as SBQQ__RenewalUpliftRate__c
+	,(inv.Workday_Contract_Number__c) as Workday_Contract_Number__c
+	,(inv.Workday_Invoice_Id__c) as Workday_Invoice_Id__c
+	,(inv.Support_Level__c) as Support_Level__c
+	,(inv.RW_Invoice_Number__c) as RW_Invoice_Number__c
+ 	,(inv.InvoiceType__c) as Invoice_Type__c-- new,renewal,amendment -- need a place to update Type
 
 -- MIGRATION FIELDS 																						
-	,concat(MIN(Con.ID),' - ',MIN(Sub.Id))  as Order_Migration_id__c -- needs created on each object. Each object's field should be unique with the object name and migration_id__c at the end to avoid twin field issues. Field should be text, set to unique and external
+	,concat((Con.ID),' - ',(Sub.Id))  as Order_Migration_id__c -- needs created on each object. Each object's field should be unique with the object name and migration_id__c at the end to avoid twin field issues. Field should be text, set to unique and external
 
 into StageQA.dbo.[Order_Load]
 
-FROM SourceQA.dbo.[Contract] Con
-left join SourceQA.dbo.Invoice__c inv
-	on inv.Related_Contract__c = Con.Id
+FROM Yearly_Subscriptions_By_Contract YSC
+left join SourceQA.dbo.[Contract] Con
+	on YSC.ContractId = Con.Id
 inner join SourceQA.dbo.SBQQ__Subscription__c Sub
-	on Sub.SBQQ__Contract__c = Con.Id
+	on Sub.Id = YSC.SubscriptionId
+left join SourceQA.dbo.Invoice__c inv
+	on inv.Id = Sub.Invoice__c
 left join SourceQA.dbo.SBQQ__Quote__c Qte
-	on Qte.ID = Con.SBQQ__Quote__c 
+	on Con.SBQQ__Quote__c = Qte.ID 
 left join SourceQA.dbo.Opportunity O
 	on Con.SBQQ__Opportunity__c = O.ID
 left join SourceQA.dbo.Opportunity RO -- When Opportunity & Quote are missing on Contract, we are using the Renewal Opportunity to get the PriceBookId
 	on Con.SBQQ__RenewalOpportunity__c = RO.ID
 left join SourceQA.dbo.Account Acct
 	on Con.AccountId = Acct.ID
+left join SourceQA.dbo.SBQQ__Quoteline__c qtl
+	on Sub.SBQQ__QuoteLine__c = qtl.Id
+left join SourceQA.dbo.SBQQ__Quote__c LineQte
+	on LineQte.Id = qtl.SBQQ__Quote__c
+left join SourceQA.dbo.Opportunity LineOpp
+	on LineOpp.SBQQ__PrimaryQuote__c = Qte.Id
 
 Where EndDate >= getdate()
 and Status = 'Activated'
@@ -138,12 +182,6 @@ and Acct.Test_Account__c = 'false'
 and Con.[SBQQ__Order__c] is null
 and O.SBQQ__Ordered__c = 'false'
 
-
-group by Con.ID, 
-		Coalesce((case when (Sub.SBQQ__SegmentStartDate__c < Con.[StartDate] or Sub.SBQQ__SegmentStartDate__c > Con.EndDate) then Con.[StartDate] else Sub.SBQQ__SegmentStartDate__c end), Con.[StartDate]) -- change to match EffectiveDate
-
---Con.ID = '8003t000008D4Z8AAK' --'8003t000008aU32AAE' 
--- only things that can amend and renew
 order by Con.ID,
 		 EffectiveDate
 
@@ -227,7 +265,7 @@ USE StageQA;
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 
-EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(50)','SANDBOX_QA','Order_Load'
+EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(20)','SANDBOX_QA','Order_Load'
 -- Error rows: https://docs.google.com/spreadsheets/d/13RQYid_LLjGiN16ICKbkwITOvvmd_9LWBcYWktStsn4/edit#gid=0
 -- one error where subscription start date is after segment end date
 
@@ -235,7 +273,7 @@ EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(50)','SANDBOX_QA','Ord
 -- Error Review	
 ---------------------------------------------------------------------------------
 -- quote a363t000002h7SqAAI and opportunity are in different currencies. The quote has the correct values
-Select error, count(*) as num from Order_Load_Result
+Select error, count(*) as num from Order_Load group by error
 -- Select * from Order_Load_Result
 -- Select error, * from Order_Load_Result a where error not like '%success%'
 Select error, count(*) as num from Order_Load_Result a
@@ -251,16 +289,21 @@ group by error
 order by num desc
 
 Select * from Order_Load_Result a
-where error not like '%success%'
+where error not like '%DUPLICATE_VALUE%' and error not like 'Operation Successful.' and error not like 'UNABLE_TO_LOCK_ROW:unable to obtain exclusive access to this record:--'
 
 ------ reload any rows that got bounced because of processing time
+
+if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Order_Reload' AND TABLE_SCHEMA = 'dbo')
+DROP TABLE StageQA.dbo.Order_Reload
+
 select * into Order_Reload from Order_Load where Order_Migration_id__c in (
 select Order_Migration_id__c from Order_Load_Result
 where error not like '%success%'
-and error not like '%DUPLICATE_VALUE%')
+and error not like '%DUPLICATE_VALUE%'
+and error like 'UNABLE_TO_LOCK_ROW:%')
 select * from Order_Reload
 
-EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','SANDBOX_QA','Order_Reload'
+EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(5)','SANDBOX_QA','Order_Reload'
 
 ---- check for errors on reload
 Select error, count(*) as num from Order_Reload_Result a
