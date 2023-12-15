@@ -303,7 +303,7 @@ and error not like '%DUPLICATE_VALUE%'
 and error like 'UNABLE_TO_LOCK_ROW:%')
 select * from Order_Reload
 
-EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(5)','SANDBOX_QA','Order_Reload'
+EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(2)','SANDBOX_QA','Order_Reload'
 
 ---- check for errors on reload
 Select error, count(*) as num from Order_Reload_Result a
@@ -313,7 +313,7 @@ order by num desc
 
 
 
-Select error, * from Order_Load_Result a where error not like '%success%'
+Select error, * from Order_Load_Result a where error not like '%success%' and error not like '%UNABLE%'
 Select top 100 error, * from Order_Load -- a where error like '%Opportunity must have%'
 
 Select BillingCountry, count(*) from Order_Load_Result a where error like '%a problem with this country, even though it may appear correct%'

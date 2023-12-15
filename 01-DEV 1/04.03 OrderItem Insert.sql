@@ -91,8 +91,8 @@ Select
 	,COALESCE(Ord.EndDate, Sub.SBQQ__EndDate__c, QL.[SBQQ__EndDate__c]) as EndDate
 	-- ,COALESCE(Sub.[SBQQ__ListPrice__c], QL.SBQQ__ListPrice__c) AS ListPrice -- An Order Product must have the same List Price as the related Price Book Entry
 	,COALESCE(QL.SBQQ__ListPrice__c, sub.SBQQ__ListPrice__c) as SBQQ__QuotedListPrice__c -- , PBE.UnitPrice
-	,COALESCE(QL.SBQQ__NetPrice__c, sub.SBQQ__ListPrice__c,0) as UnitPrice -- , PBE.UnitPrice
-	,COALESCE(QL.SBQQ__NetPrice__c, sub.SBQQ__ListPrice__c,0) as UnitPriceForceOverride__c -- , PBE.UnitPrice
+	,COALESCE(QL.SBQQ__NetPrice__c, sub.SBQQ__NetPrice__c,0) as UnitPrice -- , PBE.UnitPrice
+	,COALESCE(QL.SBQQ__NetPrice__c, sub.SBQQ__NetPrice__c,0) as UnitPriceForceOverride__c -- , PBE.UnitPrice
 	,COALESCE(QL.SBQQ__EffectiveQuantity__c ,sub.[Effective_Quantity__c])  as SBQQ__OrderedQuantity__c
 	,COALESCE(QL.SBQQ__EffectiveQuantity__c ,sub.[Effective_Quantity__c]) as Quantity
 	,COALESCE(QL.SBQQ__PricingMethod__c, Sub.SBQQ__PricingMethod__c) AS SBQQ__PricingMethod__c
@@ -356,6 +356,20 @@ select * from StageQA.dbo.OrderItem_Load
 -- EXEC StageQA.dbo.SF_Tableloader 'DELETE','SANDBOX_QA','OrderItem_Load_result'
 
 
-select * 
+if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'OrderItem_Reload' AND TABLE_SCHEMA = 'dbo')
+DROP TABLE StageQA.dbo.OrderItem_Reload
 
-from StageQA.dbo.OrderItem_Load_Result_result where error not like '%success%'
+select * into OrderItem_Reload from Order_Load where Order_Migration_id__c in (
+select Order_Migration_id__c from OrderItem_Load_Result
+where error not like '%success%'
+and error not like '%DUPLICATE_VALUE%')
+select * from OrderItem_Reload
+
+EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(2)','SANDBOX_QA','OrderItem_Reload'
+
+
+---- check for errors on reload
+Select error, count(*) as num from OrderItem_Reload_Result a
+where error not like '%success%'
+group by error
+order by num desc
