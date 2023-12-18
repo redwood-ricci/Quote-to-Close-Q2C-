@@ -83,6 +83,7 @@ Select
 	,CONCAT_WS('-', con.Id, MAX(O.OrderId)) as [Contract_Migration_Id__c]
 	,'true' as [SBQQ__PreserveBundleStructureUponRenewals__c] -- uncheck perserve bundle structure box
 	,CASE WHEN MAX(OP.AccountToId) IS NULL THEN 'Direct' ELSE 'Indirect' END  as Opportunity_Channel__c
+	,MAX(Coalesce(Qte.SBQQ__PrimaryContact__c, Oppty.Primary_Contact__c)) as Primary_Contact__c
 	,MAX(PartnerCon.Id) as Partner_Contact__c
 	,MAX(PartnerCon.Name) as REF_PartnerContactName
 	,MAX(OP.AccountToId) as Partner_Account__c
