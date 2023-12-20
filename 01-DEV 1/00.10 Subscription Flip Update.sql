@@ -92,6 +92,8 @@ select
 select * from StageQA.dbo.SBQQ__Subscription__c_FlipLoad where REF_ContractId = '8003t000008aTGZAA2'
 
 
+USE StageQA;
+EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','SANDBOX_QA','SBQQ__Subscription__c_FlipLoad'
 
 
 

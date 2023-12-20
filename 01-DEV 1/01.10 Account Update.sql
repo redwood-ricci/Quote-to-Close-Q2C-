@@ -38,6 +38,8 @@ Select
 	A.ID + '-NEO' as Account_Migration_Id__c,
 	BillingCountry
 ,BillingCountryCode
+,Agreement_Contract_Payment_Terms__c
+,SBQQ__RenewalPricingMethod__c
 --,Id
 ,IsPartner
 ,Legal_Entity_Name__c
@@ -64,7 +66,7 @@ FROM SourceQA.dbo.Account a
 ​
 --select ID,Case_Safe_Account_ID__c,Customer_Status__c,X18_Digit_Account_ID__c FROM SourceQA.dbo.Account a
 update A set 
-[RecordTypeId]='012O9000000AzF8IAK' --Make sure to update this ID with the Production 'Partner Account' Record Type Id
+[RecordTypeId]='012O9000000AzF8IAK', --Make sure to update this ID with the Production 'Partner Account' Record Type Id
 [IsPartner]='true'
 from StageQA.dbo.Account_Load A
 WHERE ID in (
@@ -95,6 +97,16 @@ update A set
 [RecordTypeId]='012O9000000AzF7IAK' --Make sure to update this ID with the Production 'Account' Record Type Id
 from StageQA.dbo.Account_Load A
 where [RecordTypeId] is null
+
+update A set
+[Agreement_Contract_Payment_Terms__c] = 'Net 30'
+from StageQA.dbo.Account_Load A
+where [Agreement_Contract_Payment_Terms__c] is null
+
+update A set
+[SBQQ__RenewalPricingMethod__c] = 'Uplift'
+from StageQA.dbo.Account_Load A
+where [SBQQ__RenewalPricingMethod__c] != 'Uplift'
 ​
 --select * from StageQA.dbo.Account_Load A
 ​
