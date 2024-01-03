@@ -37,6 +37,12 @@ USE Source_Production_SALESFORCE;
 EXEC Source_Production_SALESFORCE.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(1)','Production_SALESFORCE','Opportunity_Load'
 
 ----------------------------------------------------------------------ACCOUNT BACKUP----------------------------------------------------------------------
+/*
+-- Commented out so these have to be run on purpose to drop tables
+if exists (select * from [Salesforce backups].INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Account_Backup' AND TABLE_SCHEMA = 'dbo')
+DROP TABLE [Salesforce backups].dbo.Account_Backup
+*/
+
 USE [Source_Production_SALESFORCE];
 EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE', 'Account'
 
@@ -63,5 +69,13 @@ EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE', 'Opp
 Select *
 INTO [Salesforce backups].dbo.Opportunity_Backup
 FROM Source_Production_SALESFORCE.dbo.Account A
+
+----------------------------------------------------------------------Contract BACKUP----------------------------------------------------------------------
+
+----------------------------------------------------------------------Subscription BACKUP----------------------------------------------------------------------
+
+----------------------------------------------------------------------Opportunitylineitem BACKUP----------------------------------------------------------------------
+
+----------------------------------------------------------------------Quote BACKUP----------------------------------------------------------------------
 
 select * FROM [Salesforce backups].dbo.Opportunity_Backup
