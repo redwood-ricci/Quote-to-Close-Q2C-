@@ -16,12 +16,12 @@
 ---------------------------------------------------------------------------------
 -- Replicate Data
 ---------------------------------------------------------------------------------
-USE SourceNeocol
+USE [Source_Production_SALESFORCE]
 
-EXEC SourceNeocol.dbo.SF_Replicate 'SANDBOX_NEOCOL','sbaa__ApprovalChain__c','PKCHUNK'
-EXEC SourceNeocol.dbo.SF_Replicate 'SANDBOX_NEOCOL','sbaa__ApprovalRule__c ','PKCHUNK'
-EXEC SourceNeocol.dbo.SF_Replicate 'SANDBOX_NEOCOL','sbaa__ApprovalCondition__c','PKCHUNK'
-EXEC SourceNeocol.dbo.SF_Replicate 'SANDBOX_NEOCOL','sbaa__ApprovalVariable__c','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','sbaa__ApprovalChain__c','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','sbaa__ApprovalRule__c ','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','sbaa__ApprovalCondition__c','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','sbaa__ApprovalVariable__c','PKCHUNK'
 
 USE SourceQA
 
@@ -33,10 +33,10 @@ EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','sbaa__ApprovalVariable__c','PKCHUNK
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'sbaa__ApprovalChain__c_Load' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.[sbaa__ApprovalChain__c_Load]
+DROP TABLE Stage_Production_SALESFORCE.dbo.[sbaa__ApprovalChain__c_Load]
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
@@ -48,25 +48,25 @@ Select
 	,ac.Name as Name
 	,CAST('' as nvarchar(2000)) as Error
 
-INTO StageQA.dbo.sbaa__ApprovalChain__c_Load
+INTO Stage_Production_SALESFORCE.dbo.sbaa__ApprovalChain__c_Load
 
-FROM SourceNeocol.dbo.sbaa__ApprovalChain__c ac
-	left join SourceQA.dbo.sbaa__ApprovalChain__c ac_qa
+FROM SourceQA.dbo.sbaa__ApprovalChain__c ac
+	left join Source_Production_SALESFORCE.dbo.sbaa__ApprovalChain__c ac_qa
 		on ac_qa.Name = ac.Name
 
 	
 ---------------------------------------------------------------------------------
 -- Validations
 ---------------------------------------------------------------------------------
-Select * from StageQA.dbo.sbaa__ApprovalChain__c_Load
+Select * from Stage_Production_SALESFORCE.dbo.sbaa__ApprovalChain__c_Load
 
 
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
-EXEC StageQA.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(100)','SANDBOX_QA','sbaa__ApprovalRule__c_Load', 'Id'
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(100)','Production_SALESFORCE','sbaa__ApprovalChain__c_Load', 'Id'
 
 
 -------------------------------------------------------------------------------------
@@ -75,10 +75,10 @@ EXEC StageQA.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(100)','SANDBOX_QA','sb
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'sbaa__ApprovalRule__c_Load' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.[sbaa__ApprovalRule__c_Load]
+DROP TABLE Stage_Production_SALESFORCE.dbo.[sbaa__ApprovalRule__c_Load]
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
@@ -106,28 +106,28 @@ Select
 	,ar.sbaa__TargetObject__c  as sbaa__TargetObject__c 
 	,CAST('' as nvarchar(2000)) as Error
 
-INTO StageQA.dbo.sbaa__ApprovalRule__c_Load
+INTO Stage_Production_SALESFORCE.dbo.sbaa__ApprovalRule__c_Load
 
-FROM SourceNeocol.dbo.sbaa__ApprovalRule__c ar
-	left join SourceQA.dbo.sbaa__ApprovalRule__c ar_qa
+FROM SourceQA.dbo.sbaa__ApprovalRule__c ar
+	left join Source_Production_SALESFORCE.dbo.sbaa__ApprovalRule__c ar_qa
 		on ar_qa.Name = ar.Name
 		and ar_qa.sbaa__ApprovalStep__c = ar.sbaa__ApprovalStep__c
-	left join SourceQA.dbo.sbaa__ApprovalChain__c ac
+	left join Source_Production_SALESFORCE.dbo.sbaa__ApprovalChain__c ac
 		on ac.Approval_Chain_External_Id__c = ar.sbaa__ApprovalChain__c
 
 	
 ---------------------------------------------------------------------------------
 -- Validations
 ---------------------------------------------------------------------------------
-Select * from StageQA.dbo.sbaa__ApprovalRule__c_Load
+Select * from Stage_Production_SALESFORCE.dbo.sbaa__ApprovalRule__c_Load
 
 
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
-EXEC StageQA.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(100)','SANDBOX_QA','sbaa__ApprovalRule__c_Load', 'Id'
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(100)','Production_SALESFORCE','sbaa__ApprovalRule__c_Load', 'Id'
 
 Select error, count(*) as num from sbaa__ApprovalRule__c_Load a
 where error not like '%success%'
@@ -141,10 +141,10 @@ order by num desc
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'sbaa__ApprovalVariable__c_Load' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.sbaa__ApprovalVariable__c_Load
+DROP TABLE Stage_Production_SALESFORCE.dbo.sbaa__ApprovalVariable__c_Load
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
@@ -166,23 +166,23 @@ Select
 	,av.sbaa__FilterField__c as sbaa__FilterField__c
 	,CAST('' as nvarchar(2000)) as Error
 
-INTO StageQA.dbo.sbaa__ApprovalVariable__c_Load
+INTO Stage_Production_SALESFORCE.dbo.sbaa__ApprovalVariable__c_Load
 
-FROM SourceNeocol.dbo.sbaa__ApprovalVariable__c  av	
-	left join SourceQA.dbo.sbaa__ApprovalVariable__c av_qa
+FROM SourceQA.dbo.sbaa__ApprovalVariable__c  av	
+	left join Source_Production_SALESFORCE.dbo.sbaa__ApprovalVariable__c av_qa
 		on av_qa.Name = av.Name
 ---------------------------------------------------------------------------------
 -- Validations
 ---------------------------------------------------------------------------------
-Select * from StageQA.dbo.sbaa__ApprovalVariable__c_Load
+Select * from Stage_Production_SALESFORCE.dbo.sbaa__ApprovalVariable__c_Load
 
 
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
-EXEC StageQA.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(100)','SANDBOX_QA','sbaa__ApprovalVariable__c_Load', 'Id'
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(100)','Production_SALESFORCE','sbaa__ApprovalVariable__c_Load', 'Id'
 
 Select error, count(*) as num from sbaa__ApprovalVariable__c_Load a
 where error not like '%success%'
@@ -196,10 +196,10 @@ order by num desc
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'sbaa__ApprovalCondition__c_Load' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.[sbaa__ApprovalCondition__c_Load]
+DROP TABLE Stage_Production_SALESFORCE.dbo.[sbaa__ApprovalCondition__c_Load]
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
@@ -209,6 +209,7 @@ Select
 	CAST('' AS nvarchar(18)) AS [ID] 
 	,ac.Id as Approval_Condition_External_Id__c 
 	,ac.Name as Name
+	,ar_qa.Name as RuleName
 	,ar_qa.Id as sbaa__ApprovalRule__c
 	,ac.sbaa__EnableSmartApproval__c as sbaa__EnableSmartApproval__c
 	,ac.sbaa__FilterField__c as sbaa__FilterField__c
@@ -221,17 +222,17 @@ Select
 	,av.Id as sbaa__TestedVariable__c 
 	,CAST('' as nvarchar(2000)) as Error
 
-INTO StageQA.dbo.sbaa__ApprovalCondition__c_Load
+INTO Stage_Production_SALESFORCE.dbo.sbaa__ApprovalCondition__c_Load
 
-FROM SourceNeocol.dbo.sbaa__ApprovalCondition__c  ac	
-	left join SourceQA.dbo.sbaa__ApprovalRule__c ar_qa
+FROM SourceQA.dbo.sbaa__ApprovalCondition__c  ac	
+	left join Source_Production_SALESFORCE.dbo.sbaa__ApprovalRule__c ar_qa
 		on ar_qa.Approval_Rule_External_Id__c = ac.sbaa__ApprovalRule__c
-	left join SourceQA.dbo.sbaa__ApprovalVariable__c av
+	left join Source_Production_SALESFORCE.dbo.sbaa__ApprovalVariable__c av
 		on av.Approval_Variable_External_Id__c = ac.sbaa__TestedVariable__c 
 ---------------------------------------------------------------------------------
 -- Validations
 ---------------------------------------------------------------------------------
-Select * from StageQA.dbo.sbaa__ApprovalCondition__c_Load
+Select * from Stage_Production_SALESFORCE.dbo.sbaa__ApprovalCondition__c_Load
 
 
 ---------------------------------------------------------------------------------
@@ -239,9 +240,11 @@ Select * from StageQA.dbo.sbaa__ApprovalCondition__c_Load
 ---------------------------------------------------------------------------------
 USE StageQA;
 
-EXEC StageQA.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(100)','SANDBOX_QA','sbaa__ApprovalCondition__c_Load', 'Id'
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(100)','Production_SALESFORCE','sbaa__ApprovalCondition__c_Load', 'Id'
 
-Select error, count(*) as num from sbaa__ApprovalVariable__c_Load a
+Select error, count(*) as num from sbaa__ApprovalCondition__c_Load_Result a
 where error not like '%success%'
 group by error
 order by num desc
+
+Select * from sbaa__ApprovalCondition__c_Load_Result a where error not like '%success%'

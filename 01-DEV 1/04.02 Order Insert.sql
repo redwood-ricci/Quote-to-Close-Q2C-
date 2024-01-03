@@ -35,10 +35,10 @@ EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Invoice__c','PKCHUNK'
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
 
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Order_Load' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.[Order_Load]
+DROP TABLE Stage_Production_SALESFORCE.dbo.[Order_Load]
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
@@ -72,8 +72,8 @@ WITH Contract_Subscription_Match as (
 			on Sub.Sbqq__Contract__c = Con.Id
 		left join SourceQA.dbo.Account Acct
 			on Acct.Id = Con.AccountId
-	where EndDate >= getdate()
-		and Status = 'Activated'
+	where EndDate >= '2022-01-01'
+		and Status in ('Activated','Expired','Cancelled')
 		and Acct.Test_Account__c = 'false' 
 		and Con.[SBQQ__Order__c] is null
 ),
@@ -152,7 +152,7 @@ Select
 -- MIGRATION FIELDS 																						
 	,concat((Con.ID),' - ',(Sub.Id))  as Order_Migration_id__c -- needs created on each object. Each object's field should be unique with the object name and migration_id__c at the end to avoid twin field issues. Field should be text, set to unique and external
 
-into StageQA.dbo.[Order_Load]
+into Stage_Production_SALESFORCE.dbo.[Order_Load]
 
 FROM Yearly_Subscriptions_By_Contract YSC
 left join SourceQA.dbo.[Contract] Con
@@ -178,7 +178,8 @@ left join SourceQA.dbo.Opportunity LineOpp
 
 Where 
 O.StageName = 'Closed Won'
-and O.Cohort_Close_Date__c >= '2022-01-01'
+and Con.EndDate >= '2022-01-01'
+and Status in ('Activated','Expired','Cancelled')
 and Acct.Test_Account__c = 'false' 
 and Con.[SBQQ__Order__c] is null
 and O.SBQQ__Ordered__c = 'false'
@@ -189,12 +190,12 @@ order by Con.ID,
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
 ---------------------------------------------------------------------------------
-ALTER TABLE StageQA.dbo.[Order_Load]
+ALTER TABLE Stage_Production_SALESFORCE.dbo.[Order_Load]
 ADD [Sort] int 
 GO
 WITH NumberedRows AS (
   SELECT *, ROW_NUMBER() OVER (ORDER BY AccountID) AS OrderRowNumber
-  FROM StageQA.dbo.[Order_Load]
+  FROM Stage_Production_SALESFORCE.dbo.[Order_Load]
 )
 UPDATE NumberedRows
 SET [Sort] = OrderRowNumber;
@@ -203,20 +204,20 @@ SET [Sort] = OrderRowNumber;
 -- FROM INFORMATION_SCHEMA.COLUMNS
 -- WHERE TABLE_NAME = 'Order_Load';
 
--- select * from StageQA.dbo.[Order_Load]
+-- select * from Stage_Production_SALESFORCE.dbo.[Order_Load]
 
 ---------------------------------------------------------------------------------
 -- Validations
 ---------------------------------------------------------------------------------
 select Order_Migration_id__c, count(*)
-from StageQA.dbo.[Order_Load]
+from Stage_Production_SALESFORCE.dbo.[Order_Load]
 group by Order_Migration_id__c
 having count(*) > 1
 
 select *
- from StageQA.dbo.[Order_Load]
+ from Stage_Production_SALESFORCE.dbo.[Order_Load]
 
---  select * from StageQA.dbo.Order_Load_Result where ContractId = '8003t000007wQZiAAM'
+--  select * from Stage_Production_SALESFORCE.dbo.Order_Load_Result where ContractId = '8003t000007wQZiAAM'
 
 ---------------------------------------------------------------------------------
 -- Scrub
@@ -226,47 +227,47 @@ select *
 
 Update x
 Set BillingState = Null
-from StageQA.dbo.[Order_Load] x
+from Stage_Production_SALESFORCE.dbo.[Order_Load] x
 where BillingState in ('Taichung City')
 
 -- Set billing country equal to account country when the billing state and the account state are the same but the country is null
 -- select billingstate, BillingCountry, REF_AccountBillingState, REF_AccountBillingCountry
 Update x
 Set BillingCountry = REF_AccountBillingCountry
-from StageQA.dbo.[Order_Load] x
+from Stage_Production_SALESFORCE.dbo.[Order_Load] x
 where billingcountry is null
 and billingstate = REF_AccountBillingState
 
 
 Update x
 Set ShippingState = 'New South Wales'
-from StageQA.dbo.[Order_Load] x
+from Stage_Production_SALESFORCE.dbo.[Order_Load] x
 where ShippingState = 'Pennsylvania' and ShippingCountry = 'Australia'
 
 Update x
 Set ShippingCountry = 'Australia'
-from StageQA.dbo.[Order_Load] x
+from Stage_Production_SALESFORCE.dbo.[Order_Load] x
 where ShippingCity = 'Melbourne' and ShippingCountry = 'United States'
 
 Update x
 Set ShippingCountry = 'Canada'
-from StageQA.dbo.[Order_Load] x
+from Stage_Production_SALESFORCE.dbo.[Order_Load] x
 where ShippingState in ('Ontario','Quebec') and ShippingCountry = 'United States'
 
 -- Add berkshire as state in united kingdom
 -- Add Middlesex as state in united kingdom
 
 
--- select * from StageQA.dbo.[Order_Load]
+-- select * from Stage_Production_SALESFORCE.dbo.[Order_Load]
 -- order by sort
 
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 
-EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(20)','SANDBOX_QA','Order_Load'
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(20)','SANDBOX_QA','Order_Load'
 -- Error rows: https://docs.google.com/spreadsheets/d/13RQYid_LLjGiN16ICKbkwITOvvmd_9LWBcYWktStsn4/edit#gid=0
 -- one error where subscription start date is after segment end date
 
@@ -295,7 +296,7 @@ where error not like '%DUPLICATE_VALUE%' and error not like 'Operation Successfu
 ------ reload any rows that got bounced because of processing time
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Order_Reload' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.Order_Reload
+DROP TABLE Stage_Production_SALESFORCE.dbo.Order_Reload
 
 select * into Order_Reload from Order_Load where Order_Migration_id__c in (
 select Order_Migration_id__c from Order_Load_Result
@@ -304,7 +305,7 @@ and error not like '%DUPLICATE_VALUE%'
 and error like 'UNABLE_TO_LOCK_ROW:%')
 select * from Order_Reload
 
-EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(2)','SANDBOX_QA','Order_Reload'
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(2)','SANDBOX_QA','Order_Reload'
 
 ---- check for errors on reload
 Select error, count(*) as num from Order_Reload_Result a
@@ -323,7 +324,7 @@ group by BillingCountry
 
 /* VIEW LOGS */
 SELECT *
-  FROM [StageQA].[dbo].[DBAmp_TableLoader_Perf]
+  FROM [Stage_Production_SALESFORCE].[dbo].[DBAmp_TableLoader_Perf]
   order by LogTime desc
 
 
@@ -456,4 +457,4 @@ SELECT *
 	,
 */
 
--- EXEC StageQA.dbo.SF_Tableloader 'DELETE','SANDBOX_QA','Order_Load_result'
+-- EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'DELETE','SANDBOX_QA','Order_Load_result'
