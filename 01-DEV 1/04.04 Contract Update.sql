@@ -53,8 +53,8 @@ DECLARE @RedwoodNewDeal2024 VARCHAR(100); -- Declares a string variable with a m
 DECLARE @RedwoodLegacyDeal VARCHAR(100);
 DECLARE @TieredPriceBook2023 VARCHAR(100);
 
-SET @RedwoodNewDeal2024 = '01sO90000008D4xIAE';
-SET @RedwoodLegacyDeal = '01sO90000008D4yIAE';
+SET @RedwoodNewDeal2024 = '01sQn000000NscQIAS';
+SET @RedwoodLegacyDeal = '01sQn000000NscPIAS';
 SET @TieredPriceBook2023 = '01s3t000004H01QAAS';
 
 -- create a temp table of first orders to join with contracts later
@@ -189,8 +189,9 @@ DROP TABLE StageQA.dbo.OpportunityLineItem_DELETE;
 DECLARE @RedwoodNewDeal2024 VARCHAR(100);
 DECLARE @RedwoodLegacyDeal VARCHAR(100);
 
-SET @RedwoodNewDeal2024 = '01sO90000008D4xIAE';
-SET @RedwoodLegacyDeal = '01sO90000008D4yIAE';
+SET @RedwoodNewDeal2024 = '01sQn000000NscQIAS';
+SET @RedwoodLegacyDeal = '01sQn000000NscPIAS';
+SET @TieredPriceBook2023 = '01s3t000004H01QAAS';
 
 select
 	OLI.ID as Id,
@@ -262,8 +263,8 @@ DECLARE @RedwoodNewDeal2024 VARCHAR(100);
 DECLARE @RedwoodLegacyDeal VARCHAR(100);
 DECLARE @TieredPriceBook2023 VARCHAR(100);
 
-SET @RedwoodNewDeal2024 = '01sO90000008D4xIAE';
-SET @RedwoodLegacyDeal = '01sO90000008D4yIAE';
+SET @RedwoodNewDeal2024 = '01sQn000000NscQIAS';
+SET @RedwoodLegacyDeal = '01sQn000000NscPIAS';
 SET @TieredPriceBook2023 = '01s3t000004H01QAAS';
 
 select 
