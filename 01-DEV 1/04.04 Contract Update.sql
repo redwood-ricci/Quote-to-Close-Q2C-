@@ -113,8 +113,8 @@ Select
 	LEFT JOIN SourceQA.dbo.Contact PartnerCon
 		on PartnerCon.AccountId = OP.AccountToId 
 		and PartnerCon.Primary_Contact__c = 'true'
-	Where Con.EndDate >= getdate()
-	and Con.Status = 'Activated'
+	Where O.StageName = 'Closed Won'
+	and O.Cohort_Close_Date__c >= '2022-01-01'
 	--and Con.[SBQQ__RenewalPricebookId__c] != @RedwoodNewDeal2024 -- should uncomment this
 	--and Con.[SBQQ__RenewalPricebookId__c] != @RedwoodLegacyDeal -- should uncomment this
 

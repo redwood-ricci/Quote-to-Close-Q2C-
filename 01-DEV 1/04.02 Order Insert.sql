@@ -176,8 +176,9 @@ left join SourceQA.dbo.SBQQ__Quote__c LineQte
 left join SourceQA.dbo.Opportunity LineOpp
 	on LineOpp.SBQQ__PrimaryQuote__c = Qte.Id
 
-Where EndDate >= getdate()
-and Status = 'Activated'
+Where 
+O.StageName = 'Closed Won'
+and O.Cohort_Close_Date__c >= '2022-01-01'
 and Acct.Test_Account__c = 'false' 
 and Con.[SBQQ__Order__c] is null
 and O.SBQQ__Ordered__c = 'false'
