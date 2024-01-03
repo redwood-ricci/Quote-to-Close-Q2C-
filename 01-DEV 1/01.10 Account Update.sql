@@ -12,20 +12,21 @@
 --- 1. 
 ---------------------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------------
-USE SourceQA;
+USE [Source_Production_SALESFORCE];
 ​
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Account'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE', 'Account'
+
 -- EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'User'
 --EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'RecordType'
 ​
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 ​
 ​
-if exists (select * from StageQA.INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Account_Load' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.[Account_Load]
+if exists (select * from Stage_Production_SALESFORCE.INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Account_Load' AND TABLE_SCHEMA = 'dbo')
+DROP TABLE Stage_Production_SALESFORCE.dbo.[Account_Load]
 ​
 ---------------------------------------------------------------------------------
 -- Create Staging Table
@@ -61,14 +62,14 @@ Select
 --	  when [Type] in ('Consulting Services "Partner"','Reseller','Limited Reseller','MSP','System Integrator') then 'Partner Account' else 'Others' end as [Record Type Name]
 --,case when [Type] in ('BPA Customer','Customer','Former Customer','Prospect') then '012E1000000MK89IAG' 
 --	  when [Type] in ('Consulting Services "Partner"','Reseller','Limited Reseller','MSP','System Integrator') then '012E1000000MK9lIAG' else 'NA' end as [RecordTypeId]
-INTO StageQA.dbo.Account_Load
-FROM SourceQA.dbo.Account a
+INTO Stage_Production_SALESFORCE.dbo.Account_Load
+FROM Source_Production_SALESFORCE.dbo.Account a
 ​
 --select ID,Case_Safe_Account_ID__c,Customer_Status__c,X18_Digit_Account_ID__c FROM SourceQA.dbo.Account a
 update A set 
-[RecordTypeId]='012O9000000AzF8IAK', --Make sure to update this ID with the Production 'Partner Account' Record Type Id
+[RecordTypeId]='012Qn000000vtNxIAI', --Make sure to update this ID with the Production 'Partner Account' Record Type Id
 [IsPartner]='true'
-from StageQA.dbo.Account_Load A
+from Stage_Production_SALESFORCE.dbo.Account_Load A
 WHERE ID in (
 '0013800001L2rE2AAJ','0013800001MPYPtAAP','0013800001MPknFAAT','0013800001NLKUSAA5','0013800001NtquvAAB','0013800001R3IE5AAN','0013800001R5RtHAAV',
 '0013800001S41VbAAJ','0013800001S4kmWAAR','0013800001U6eFcAAJ','0013800001U7IGvAAN','0013800001U83q3AAB','0013800001U8OSrAAN','0013t00001U980SAAR','0013t00001riR7DAAU',
@@ -94,18 +95,18 @@ WHERE ID in (
 )
 ​
 update A set 
-[RecordTypeId]='012O9000000AzF7IAK' --Make sure to update this ID with the Production 'Account' Record Type Id
-from StageQA.dbo.Account_Load A
+[RecordTypeId]='012Qn000000vtMLIAY' --Make sure to update this ID with the Production 'Account' Record Type Id
+from Stage_Production_SALESFORCE.dbo.Account_Load A
 where [RecordTypeId] is null
 
 update A set
 [Agreement_Contract_Payment_Terms__c] = 'Net 30'
-from StageQA.dbo.Account_Load A
+from Stage_Production_SALESFORCE.dbo.Account_Load A
 where [Agreement_Contract_Payment_Terms__c] is null
 
 update A set
 [SBQQ__RenewalPricingMethod__c] = 'Uplift'
-from StageQA.dbo.Account_Load A
+from Stage_Production_SALESFORCE.dbo.Account_Load A
 where [SBQQ__RenewalPricingMethod__c] != 'Uplift'
 ​
 --select * from StageQA.dbo.Account_Load A
@@ -115,7 +116,7 @@ where [SBQQ__RenewalPricingMethod__c] != 'Uplift'
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
 ---------------------------------------------------------------------------------
-ALTER TABLE StageQA.dbo.[Account_Load]
+ALTER TABLE Stage_Production_SALESFORCE.dbo.[Account_Load]
 ADD [Sort] int IDENTITY (1,1)
 ​
 ​
@@ -124,19 +125,19 @@ ADD [Sort] int IDENTITY (1,1)
 ---------------------------------------------------------------------------------
 ​
 select Account_Migration_Id__c, count(*)
-from StageQA.dbo.Account_Load
+from Stage_Production_SALESFORCE.dbo.Account_Load
 group by Account_Migration_Id__c
 having count(*) > 1
 
 
 select *
- from StageQA.dbo.Account_Load
+ from Stage_Production_SALESFORCE.dbo.Account_Load
 ​
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 ​
-EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(100)','SANDBOX_QA','Account_Load'
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(100)','SANDBOX_QA','Account_Load'
 ​
 ---------------------------------------------------------------------------------
 -- Error Review	

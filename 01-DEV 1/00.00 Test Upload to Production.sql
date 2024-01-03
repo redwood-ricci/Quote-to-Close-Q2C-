@@ -35,3 +35,33 @@ where NextStep is null
 -- very carefully push the update to production
 USE Source_Production_SALESFORCE;
 EXEC Source_Production_SALESFORCE.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(1)','Production_SALESFORCE','Opportunity_Load'
+
+----------------------------------------------------------------------ACCOUNT BACKUP----------------------------------------------------------------------
+USE [Source_Production_SALESFORCE];
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE', 'Account'
+
+Select *
+INTO [Salesforce backups].dbo.Account_Backup
+FROM Source_Production_SALESFORCE.dbo.Account A
+
+select * FROM [Salesforce backups].dbo.Account_Backup
+
+----------------------------------------------------------------------Contact BACKUP----------------------------------------------------------------------
+USE [Source_Production_SALESFORCE];
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE', 'Contact'
+
+Select *
+INTO [Salesforce backups].dbo.Contact_Backup
+FROM Source_Production_SALESFORCE.dbo.Account A
+
+select * FROM [Salesforce backups].dbo.Contact_Backup
+
+----------------------------------------------------------------------Opportunity BACKUP----------------------------------------------------------------------
+USE [Source_Production_SALESFORCE];
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE', 'Opportunity'
+
+Select *
+INTO [Salesforce backups].dbo.Opportunity_Backup
+FROM Source_Production_SALESFORCE.dbo.Account A
+
+select * FROM [Salesforce backups].dbo.Opportunity_Backup

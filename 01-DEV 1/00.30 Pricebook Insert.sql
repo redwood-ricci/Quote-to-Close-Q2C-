@@ -16,44 +16,42 @@
 ---------------------------------------------------------------------------------
 -- Replicate Data
 ---------------------------------------------------------------------------------
-USE SourceNeocol
+USE SourceQA
 
-EXEC SourceNeocol.dbo.SF_Replicate 'SANDBOX_NEOCOL','Pricebook2','PKCHUNK'
+EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Pricebook2','PKCHUNK'
 
 
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Pricebook2_Load' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.[Pricebook2_Load]
+DROP TABLE Stage_Production_SALESFORCE.dbo.[Pricebook2_Load]
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
 Select
 	*,
 	CAST('' as nvarchar(2000)) as Error
-	,PB.Id as External_Id__c
 
+INTO Stage_Production_SALESFORCE.dbo.Pricebook2_Load
 
-INTO StageQA.dbo.Pricebook2_Load
-
-FROM SourceNeocol.dbo.PriceBook2 PB
+FROM SourceQA.dbo.PriceBook2 PB
 
 WHERE Name LIKE '%Redwood% 2024%'
 	
 ---------------------------------------------------------------------------------
 --Drop Id from the Column
---EXEC sp_rename 'StageQA.dbo.Pricebook2_Load.Id', 'ExternalId';
+--EXEC sp_rename 'Stage_Production_SALESFORCE.dbo.Pricebook2_Load.Id', 'ExternalId';
 
-ALTER TABLE StageQA.dbo.Pricebook2_Load
+ALTER TABLE Stage_Production_SALESFORCE.dbo.Pricebook2_Load
 DROP COLUMN Id, LastModifiedById, LastModifiedDate, CreatedDate, CreatedById;
 
-ALTER TABLE StageQA.dbo.Pricebook2_Load
+ALTER TABLE Stage_Production_SALESFORCE.dbo.Pricebook2_Load
 ADD Id nchar(18);
 
 
@@ -61,14 +59,14 @@ ADD Id nchar(18);
 -- Validations
 ---------------------------------------------------------------------------------
 
-Select * from StageQA.dbo.Pricebook2_Load
+Select * from Stage_Production_SALESFORCE.dbo.Pricebook2_Load
 
 
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 
-EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','SANDBOX_QA','Pricebook2_Load'
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','Production_SALESFORCE','Pricebook2_Load'
 
 ---------------------------------------------------------------------------------
 -- Error Review	

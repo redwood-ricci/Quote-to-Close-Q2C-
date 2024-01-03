@@ -19,12 +19,12 @@ EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'SBQQ__PriceAction__c'​
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'SBQQ__PriceCondition__c'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'SBQQ__SummaryVariable__c'
 
-USE SourceNeocol;
+USE [Source_Production_SALESFORCE];
 ​
-EXEC SourceNeocol.dbo.SF_Replicate 'SANDBOX_NEOCOL', 'SBQQ__PriceRule__c'​
-EXEC SourceNeocol.dbo.SF_Replicate 'SANDBOX_NEOCOL', 'SBQQ__PriceAction__c'​
-EXEC SourceNeocol.dbo.SF_Replicate 'SANDBOX_NEOCOL', 'SBQQ__PriceCondition__c'
-EXEC SourceNeocol.dbo.SF_Replicate 'SANDBOX_NEOCOL', 'SBQQ__SummaryVariable__c'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE', 'SBQQ__PriceRule__c'​
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE', 'SBQQ__PriceAction__c'​
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE', 'SBQQ__PriceCondition__c'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE', 'SBQQ__SummaryVariable__c'
 
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -33,10 +33,10 @@ EXEC SourceNeocol.dbo.SF_Replicate 'SANDBOX_NEOCOL', 'SBQQ__SummaryVariable__c'
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'SBQQ__PriceRule__c_Load' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.[SBQQ__PriceRule__c_Load]
+DROP TABLE Stage_Production_SALESFORCE.dbo.[SBQQ__PriceRule__c_Load]
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
@@ -60,25 +60,25 @@ Select
 	,pr.Description__c  as Description__c 
 	,CAST('' as nvarchar(2000)) as Error
 
-INTO StageQA.dbo.SBQQ__PriceRule__c_Load
+INTO Stage_Production_SALESFORCE.dbo.SBQQ__PriceRule__c_Load
 
-FROM SourceNeocol.dbo.SBQQ__PriceRule__c pr
-	left join SourceQA.dbo.SBQQ__PriceRule__c pr_qa
+FROM SourceQA.dbo.SBQQ__PriceRule__c pr
+	left join Source_Production_SALESFORCE.dbo.SBQQ__PriceRule__c pr_qa
 		on pr_qa.Name = pr.Name
 
 	
 ---------------------------------------------------------------------------------
 -- Validations
 ---------------------------------------------------------------------------------
-Select * from StageQA.dbo.SBQQ__PriceRule__c_Load
+Select * from Stage_Production_SALESFORCE.dbo.SBQQ__PriceRule__c_Load
 
 
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
-EXEC StageQA.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(100)','SANDBOX_QA','SBQQ__PriceRule__c_Load', 'Id'
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(100)','Production_SALESFORCE','SBQQ__PriceRule__c_Load', 'Id'
 
 Select error, * from SBQQ__PriceRule__c_Load_Result a where error not like '%success%'
 
@@ -90,10 +90,10 @@ Select error, * from SBQQ__PriceRule__c_Load_Result a where error not like '%suc
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'SBQQ__PriceCondition__c_Load' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.[SBQQ__PriceCondition__c_Load]
+DROP TABLE Stage_Production_SALESFORCE.dbo.[SBQQ__PriceCondition__c_Load]
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
@@ -118,28 +118,32 @@ Select
 	,pc.SBQQ__Value__c as SBQQ__Value__c
 	,CAST('' as nvarchar(2000)) as Error
 
-INTO StageQA.dbo.SBQQ__PriceCondition__c_Load
+INTO Stage_Production_SALESFORCE.dbo.SBQQ__PriceCondition__c_Load
 
-FROM SourceNeocol.dbo.SBQQ__PriceCondition__c pc
-	left join SourceQA.dbo.SBQQ__PriceRule__c pr
+FROM SourceQA.dbo.SBQQ__PriceCondition__c pc
+	left join Source_Production_SALESFORCE.dbo.SBQQ__PriceCondition__c pc_qa
+		on pc_qa.Id  = pc.Price_Condition_External_Id__c 
+	left join Source_Production_SALESFORCE.dbo.SBQQ__PriceRule__c pr
 		on pr.Price_Rule_External_Id__c = pc.SBQQ__Rule__c
-	left join SourceQA.dbo.SBQQ__PriceCondition__c pc_qa
-		on pr.Price_Rule_External_Id__c = pc.Id
 
 	
 ---------------------------------------------------------------------------------
 -- Validations
 ---------------------------------------------------------------------------------
-Select * from StageQA.dbo.SBQQ__PriceCondition__c_Load
+Select * from Stage_Production_SALESFORCE.dbo.SBQQ__PriceCondition__c_Load
 
 
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
-EXEC StageQA.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(100)','SANDBOX_QA','SBQQ__PriceCondition__c_Load', 'Id'
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(100)','Production_SALESFORCE','SBQQ__PriceCondition__c_Load', 'Id'
 
+Select error, count(*) as num from SBQQ__PriceCondition__c_Load_Result a
+where error not like '%success%'
+group by error
+order by num desc
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Summary variable
@@ -148,10 +152,10 @@ EXEC StageQA.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(100)','SANDBOX_QA','SB
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'SBQQ__SummaryVariable__c_Load' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.[SBQQ__SummaryVariable__c_Load]
+DROP TABLE Stage_Production_SALESFORCE.dbo.[SBQQ__SummaryVariable__c_Load]
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
@@ -174,25 +178,25 @@ Select
 	,sv.SBQQ__ValueElement__c as SBQQ__ValueElement__c
 	,CAST('' as nvarchar(2000)) as Error
 
-INTO StageQA.dbo.[SBQQ__SummaryVariable__c_Load]
+INTO Stage_Production_SALESFORCE.dbo.[SBQQ__SummaryVariable__c_Load]
 
-FROM SourceNeocol.dbo.SBQQ__SummaryVariable__c sv
-	left join SourceQA.dbo.SBQQ__SummaryVariable__c sv_qa
+FROM SourceQA.dbo.SBQQ__SummaryVariable__c sv
+	left join Source_Production_SALESFORCE.dbo.SBQQ__SummaryVariable__c sv_qa
 		on sv.Name = sv_qa.Name
 
 	
 ---------------------------------------------------------------------------------
 -- Validations
 ---------------------------------------------------------------------------------
-Select * from StageQA.dbo.[SBQQ__SummaryVariable__c_Load]
+Select * from Stage_Production_SALESFORCE.dbo.[SBQQ__SummaryVariable__c_Load]
 
 
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
-EXEC StageQA.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(100)','SANDBOX_QA','SBQQ__SummaryVariable__c_Load', 'Id'
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(100)','Production_SALESFORCE','SBQQ__SummaryVariable__c_Load', 'Id'
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Price Action
@@ -201,10 +205,10 @@ EXEC StageQA.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(100)','SANDBOX_QA','SB
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'SBQQ__PriceAction__c_Load' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.[SBQQ__PriceAction__c_Load]
+DROP TABLE Stage_Production_SALESFORCE.dbo.[SBQQ__PriceAction__c_Load]
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
@@ -229,28 +233,33 @@ Select
 	,pa.SBQQ__Value__c   as SBQQ__Value__c  
 	,CAST('' as nvarchar(2000)) as Error
 
-INTO StageQA.dbo.[SBQQ__PriceAction__c_Load]
+INTO Stage_Production_SALESFORCE.dbo.[SBQQ__PriceAction__c_Load]
 
-FROM SourceNeocol.dbo.SBQQ__PriceAction__c pa
-	left join SourceQA.dbo.SBQQ__PriceRule__c pr
+FROM SourceQA.dbo.SBQQ__PriceAction__c pa
+	left join Source_Production_SALESFORCE.dbo.SBQQ__PriceRule__c pr
 		on pr.Price_Rule_External_Id__c = pa.SBQQ__Rule__c
-	left join SourceQA.dbo.SBQQ__PriceAction__c pa_qa
+	left join Source_Production_SALESFORCE.dbo.SBQQ__PriceAction__c pa_qa
 		on pa.SBQQ__Rule__c = pr.Price_Rule_External_Id__c
 		and pa.SBQQ__Field__c = pa_qa.SBQQ__Field__c
 		and pa.SBQQ__Value__c = pa_qa.SBQQ__Value__c
-	left join SourceQA.dbo.SBQQ__SummaryVariable__c as sv
+	left join Source_Production_SALESFORCE.dbo.SBQQ__SummaryVariable__c as sv
 		on sv.Summary_Variable_External_Id__c = pa.SBQQ__SourceVariable__c
 
 	
 ---------------------------------------------------------------------------------
 -- Validations
 ---------------------------------------------------------------------------------
-Select * from StageQA.dbo.[SBQQ__PriceAction__c_Load]
+Select * from Stage_Production_SALESFORCE.dbo.[SBQQ__PriceAction__c_Load]
 
 
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
-EXEC StageQA.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(100)','SANDBOX_QA','SBQQ__PriceAction__c_Load', 'Id'
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(100)','Production_SALESFORCE','SBQQ__PriceAction__c_Load', 'Id'
+
+Select error, count(*) as num from SBQQ__PriceAction__c_Load_Result a
+where error not like '%success%'
+group by error
+order by num desc
