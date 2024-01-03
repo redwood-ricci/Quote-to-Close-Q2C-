@@ -15,9 +15,9 @@
 ---------------------------------------------------------------------------------
 -- Replicate Data
 ---------------------------------------------------------------------------------
-USE SourceQA;
+USE [Source_Production_SALESFORCE];
 
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Product2','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE', 'Product2','PKCHUNK'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Contract','PKCHUNK'
 EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'SBQQ__Subscription__c','PKCHUNK'
 
