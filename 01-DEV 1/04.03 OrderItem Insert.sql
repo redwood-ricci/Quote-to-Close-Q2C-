@@ -263,6 +263,7 @@ left join Source_Production_SALESFORCE.dbo.[PriceBookEntry] PBE
 	--and P2.ID = PBE.Product2ID
 Where Con.EndDate >= '2022-01-01'
 and Con.Status in ('Activated','Expired','Cancelled')
+and  Ord.Order_Migration_id__c is not null
 and Con.[SBQQ__Order__c] is null
 
 -- and Inv.Test_Account__c = 'false'
