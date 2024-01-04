@@ -315,6 +315,11 @@ select * from Stage_Production_SALESFORCE.dbo.OrderItem_Load where PricebookEntr
 USE Stage_Production_SALESFORCE;
 EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(50)','Production_SALESFORCE','OrderItem_Load'
 
+-- count the errors
+select Error,count(*) from OrderItem_Load_Result
+where Error not like '%Success%'
+group by Error
+
 -- retry loading the failed records more slowly
 drop table OrderItem_Load
 select
@@ -333,7 +338,8 @@ Set ID = ''
 from OrderItem_Load x
 where id is null
 
-EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(1)','Production_SALESFORCE','OrderItem_Load'
+select count(*) from OrderItem_Load
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','Production_SALESFORCE','OrderItem_Load'
 
 ---------------------------------------------------------------------------------
 -- Error Review	
@@ -345,8 +351,7 @@ Select * from OrderItem_Load_Result a
 where error not like '%DUPLICATE_VALUE%' and error not like 'Operation Successful.' and error not like 'UNABLE_TO_LOCK_ROW:unable to obtain exclusive access to this record:--'
 
 select * from Stage_Production_SALESFORCE.dbo.OrderItem_Load_Result a where error != 'Operation Successful.'
---------^^^^^^^^^^^^^^^ Error sheet: https://docs.google.com/spreadsheets/d/13RQYid_LLjGiN16ICKbkwITOvvmd_9LWBcYWktStsn4/edit#gid=1663377357 -------------
--- 14 errors
+--------^^^^^^^^^^^^^^^ Error sheet: https://docs.google.com/spreadsheets/d/1sgUxp3p8NJE5MNTyHKg3-sGk5TGjPnwIUwq_E6OJjb4/edit#gid=212887611 -------------
 
 -- USE Insert_Database_Name_Here; EXEC SF_Tableloader 'HardDelete:batchsize(10)', 'Production_SALESFORCE', 'SBQQ__QuoteL		ine__c_Load_Result'
 select * from Stage_Production_SALESFORCE.dbo.OrderItem_Load_Result

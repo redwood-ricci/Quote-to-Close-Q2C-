@@ -123,12 +123,16 @@ Select
 	,(Acct.BillingState) as REF_AccountBillingState
 	,(Acct.BillingPostalCode) as REF_AccountBillingPostalCode
 	,(Acct.BillingCountry) as REF_AccountBillingCountry
-
 	,dbo.scrub_address((Coalesce(Qte.SBQQ__ShippingStreet__c		,Con.[ShippingStreet]		))) as [ShippingStreet]
 	,dbo.scrub_address((Coalesce(Qte.SBQQ__ShippingCity__c			,Con.[ShippingCity]		))	) as [ShippingCity]
 	,dbo.scrub_address((Coalesce(Qte.SBQQ__ShippingState__c		,Con.[ShippingState]		))) as [ShippingState]
 	,dbo.scrub_address((Coalesce(Qte.SBQQ__ShippingPostalCode__c	,Con.[ShippingPostalCode]))) as [ShippingPostalCode]
 	,dbo.scrub_address((Coalesce(Qte.SBQQ__ShippingCountry__c 		,Con.[ShippingCountry]))	) as [ShippingCountry]
+	,(Acct.ShippingStreet) as REF_ShippingStreet
+	,(Acct.ShippingCity) as REF_ShippingCity
+	,(Acct.ShippingState) as REF_ShippingState
+	,(Acct.ShippingPostalCode) as REF_ShippingPostalCode
+	,(Acct.ShippingCountry) as REF_ShippingCountry
 
 	,(Con.CreatedById) as CreatedById -- Requires a permission set to allow migration user to touch audit fields --https://help.salesforce.com/s/articleView?id=000386875&language=en_US&type=1
 	-- do we want the createddate to match the contract or quote?
@@ -254,6 +258,95 @@ Set ShippingCountry = 'Canada'
 from Stage_Production_SALESFORCE.dbo.[Order_Load] x
 where ShippingState in ('Ontario','Quebec') and ShippingCountry = 'United States'
 
+Update x
+Set ShippingCountry = 'Canada'
+from Stage_Production_SALESFORCE.dbo.[Order_Load] x
+where ShippingState in ('Ontario','Quebec','Alberta','British Columbia') and ShippingCountry = 'United States'
+
+Update x
+Set ShippingCountry = 'United States'
+from Stage_Production_SALESFORCE.dbo.[Order_Load] x
+where ShippingState in ('California') and ShippingCountry = 'Germany'
+
+Update x
+Set ShippingState = NULL
+from Stage_Production_SALESFORCE.dbo.[Order_Load] x
+where ShippingState in ('Berkshire','Middlesex','Islington') and ShippingCountry = 'United Kingdom'
+
+Update x
+Set BillingState = NULL
+from Stage_Production_SALESFORCE.dbo.[Order_Load] x
+where BillingState in ('Berkshire','Middlesex','Islington') and BillingCountry = 'United Kingdom'
+
+Update x
+Set BillingState = NULL
+from Stage_Production_SALESFORCE.dbo.[Order_Load] x
+where BillingState in ('Berkshire','Middlesex','Islington') and BillingCountry = 'United Kingdom'
+
+Update x
+Set BillingState =  'New South Wales'
+,BillingCountry = 'Australia'
+from Stage_Production_SALESFORCE.dbo.[Order_Load] x
+where BillingCity = 'North Sydney' and BillingCountry = 'United States'
+
+
+Update x
+Set
+BillingStreet = REF_ShippingStreet
+,BillingCity = REF_ShippingCity
+,BillingState = REF_ShippingState
+,BillingPostalCode = REF_ShippingPostalCode
+,BillingCountry = REF_ShippingCountry
+from Stage_Production_SALESFORCE.dbo.[Order_Load] x
+where SBQQ__Quote__c in ('a363t000004LspDAAS')
+
+Update x
+Set
+BillingCountry = REF_ShippingCountry
+from Stage_Production_SALESFORCE.dbo.[Order_Load] x
+where SBQQ__Quote__c in ('a363t0000032Xy5AAE')
+
+Update x
+Set
+BillingCountry = 'United States'
+,ShippingCountry = 'United States'
+from Stage_Production_SALESFORCE.dbo.[Order_Load] x
+where SBQQ__Quote__c in ('a363t0000032Xp7AAE')
+
+Update x
+Set
+ShippingStreet = REF_AccountBillingStreet
+,ShippingCity = REF_AccountBillingCity
+,ShippingState = REF_AccountBillingState
+,ShippingPostalCode = REF_AccountBillingPostalCode
+,ShippingCountry = REF_AccountBillingCountry
+from Stage_Production_SALESFORCE.dbo.[Order_Load] x
+where SBQQ__Quote__c in ('a363t000002h6G2AAI')
+
+Update x
+Set
+ShippingState = 'Hong Kong'
+from Stage_Production_SALESFORCE.dbo.[Order_Load] x
+where SBQQ__Quote__c in ('a363t0000032Z3BAAU')
+
+
+/*
+select
+BillingStreet
+,REF_ShippingStreet
+,BillingCity
+,REF_ShippingCity
+,BillingState
+,REF_ShippingState
+,BillingPostalCode
+,REF_ShippingPostalCode
+,BillingCountry
+,REF_ShippingCountry
+from Order_Load
+where SBQQ__Quote__c in ('a363t000004LspDAAS')
+*/
+
+
 -- Add berkshire as state in united kingdom
 -- Add Middlesex as state in united kingdom
 
@@ -268,14 +361,14 @@ USE Stage_Production_SALESFORCE;
 ---------------------------------------------------------------------------------
 
 EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(20)','Production_SALESFORCE','Order_Load'
--- Error rows: https://docs.google.com/spreadsheets/d/13RQYid_LLjGiN16ICKbkwITOvvmd_9LWBcYWktStsn4/edit#gid=0
+-- Error rows: https://docs.google.com/spreadsheets/d/1sgUxp3p8NJE5MNTyHKg3-sGk5TGjPnwIUwq_E6OJjb4/edit#gid=741708295
 -- one error where subscription start date is after segment end date
 
 ---------------------------------------------------------------------------------
 -- Error Review	
 ---------------------------------------------------------------------------------
 -- quote a363t000002h7SqAAI and opportunity are in different currencies. The quote has the correct values
-Select error, count(*) as num from Order_Load group by error
+-- Select error, count(*) as num from Order_Load group by error
 -- Select * from Order_Load_Result
 -- Select error, * from Order_Load_Result a where error not like '%success%'
 Select error, count(*) as num from Order_Load_Result a
@@ -302,8 +395,34 @@ select * into Order_Reload from Order_Load where Order_Migration_id__c in (
 select Order_Migration_id__c from Order_Load_Result
 where error not like '%success%'
 and error not like '%DUPLICATE_VALUE%'
-and error like 'UNABLE_TO_LOCK_ROW:%')
+-- and error like 'UNABLE_TO_LOCK_ROW:%'
+)
 select * from Order_Reload
+
+Update x
+Set
+ShippingCountry = 'Australia'
+from Stage_Production_SALESFORCE.dbo.[Order_Reload] x
+where SBQQ__Quote__c in ('a363t000003AjY0AAK')
+
+Update x
+Set
+ShippingState = NULL
+,BillingState = NULL
+from Stage_Production_SALESFORCE.dbo.[Order_Reload] x
+where SBQQ__Quote__c in ('a363t0000032XpgAAE') and BillingCountry = 'Qatar'
+
+Update x
+Set
+BillingState = NULL
+from Stage_Production_SALESFORCE.dbo.[Order_Reload] x
+where SBQQ__Quote__c in ('a363t0000032Xy5AAE') and BillingCountry = 'United Kingdom'
+
+Update x
+Set
+SBQQ__PaymentTerm__c = 'Net 30'
+from Stage_Production_SALESFORCE.dbo.[Order_Reload] x
+where Order_Migration_id__c in ('800Qn000002lKN8IAM - a3IQn0000001CnAMAU')
 
 EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(1)','Production_SALESFORCE','Order_Reload'
 
@@ -312,6 +431,9 @@ Select error, count(*) as num from Order_Reload_Result a
 where error not like '%success%'
 group by error
 order by num desc
+
+Select * from Order_Reload_Result a
+where error not like '%success%' and error not like 'DUPLICATE%'
 
 
 
