@@ -44,6 +44,7 @@ DROP TABLE Stage_Production_SALESFORCE.dbo.[RW_Subscription_Instance__c_Load]
 Select
 	CAST('' AS nvarchar(18)) AS [ID]
 	,CAST('' as nvarchar(2000)) as Error
+	,a.Id as External_Id__c
 	,sub.Id as Subscription__c
 	,(sub.CurrencyIsoCode) as CurrencyIsoCode
 	,(prod.name) as ProductName
@@ -75,7 +76,10 @@ WHERE con.EndDate > '2024-01-01'
 
 
 select * from Stage_Production_SALESFORCE.dbo.[RW_Subscription_Instance__c_Load] where Subscription__c = 'a3I3t0000029EqdEAE'
-
+select External_Id__c, count(*)
+from Stage_Production_SALESFORCE.dbo.[RW_Subscription_Instance__c_Load]
+group by External_Id__c
+having count(*) > 1
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
@@ -111,24 +115,26 @@ Select
 	,max(PLC.Name) as ProductLicenseComponentName
 	,max(a.SerialNumber) as License_Key__c
 	,max(SI.Id) as Subscription_Instance__c
-	,max(sub.Name) as SubscriptionName
-	,max(con.ContractNumber) as ContractNumber
+	--,max(sub.Name) as SubscriptionName
+	,max(a.ContactId) as ContractNumber
 
 into Stage_Production_SALESFORCE.dbo.[RW_Component_License_Key__c_Load]
 
 FROM Source_Production_SALESFORCE.dbo.Asset a
-	inner join Source_Production_SALESFORCE.dbo.SBQQ__Subscription__c sub
-		on sub.Id = a.Subscription2__c
-	left join Source_Production_SALESFORCE.dbo.RW_Subscription_Instance__c SI
-		on SI.Subscription__c = Sub.Id
-	left join Source_Production_SALESFORCE.dbo.Product2 prod
-		on prod.Id = sub.SBQQ__Product__c 
+	--inner join Source_Production_SALESFORCE.dbo.SBQQ__Subscription__c sub
+	--	on sub.Id = a.Subscription2__c
+	inner join Source_Production_SALESFORCE.dbo.RW_Subscription_Instance__c SI
+		on SI.External_Id__c = a.Id
+	inner join Source_Production_SALESFORCE.dbo.Product2 prod
+		on prod.Product2Id = a.Product2Id
 	left join Source_Production_SALESFORCE.dbo.RW_Product_License_Component__c PLC 
 		on prod.Id = PLC.Product__c
-	left join Source_Production_SALESFORCE.dbo.RW_License_Component__c LC
+	inner join Source_Production_SALESFORCE.dbo.RW_License_Component__c LC
 		on LC.Id = PLC.License_Component__c
+		and (prod.Name like (LC.Name+'%')
+			or prod.Name = LC.Name)
 	left join Source_Production_SALESFORCE.dbo.Contract con
-		on con.Id = sub.SBQQ__Contract__c
+		on con.Id = a.Contract__c
 	left join Source_Production_SALESFORCE.dbo.Account acc
 		on acc.Id = a.AccountId
 
@@ -136,13 +142,14 @@ WHERE con.EndDate > getdate()
 	and con.Status = 'Activated'
 	--and con.ContractNumber = '00003441'
 	--and sub.Id = 'a3I3t000003SfGiEAK'
-	and (prod.Name like (LC.Name+'%')
-	or prod.Name = LC.Name)
+	and a.Subscription2__c is not null
 	and acc.Test_Account__c = 'false'
 
-group by sub.Id
+group by a.Id
 
 Order by max(Prod.Name)
+
+
 
 
 ---------------------------------------------------------------------------------

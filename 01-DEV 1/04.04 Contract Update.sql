@@ -26,24 +26,24 @@ Set Opportunity channel, Partner Account & Partner Contact, subscription start a
 ---------------------------------------------------------------------------------
 -- Replicate Data
 ---------------------------------------------------------------------------------
-USE SourceQA;
+USE Source_Production_SALESFORCE;
 
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Account','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','PriceBook2','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','RecordType','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','SBQQ__Quote__c','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Opportunity','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','OpportunityLineItem','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Contract','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Order','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','Account','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','PriceBook2','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','RecordType','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','SBQQ__Quote__c','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','Opportunity','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','OpportunityLineItem','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','Contract','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','Order','PKCHUNK'
 
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Contract_Load' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.[Contract_Load]
+DROP TABLE Stage_Production_SALESFORCE.dbo.[Contract_Load]
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
@@ -64,7 +64,7 @@ WITH order_rank AS (
 	Id as OrderId,
     ROW_NUMBER() OVER (PARTITION BY ContractId ORDER BY EffectiveDate) AS rn -- choose the first order for each contract
   FROM
-    SourceQA.dbo.[Order]
+    Source_Production_SALESFORCE.dbo.[Order]
 	where ContractId is not null),
 
 first_orders as ( -- select the order rank and pull out only one row for each contract with the first order for that contract
@@ -97,20 +97,20 @@ Select
 	,MAX(Qte.Id) as REF_QuoteID
 	,MAX(Con.SBQQ__RenewalOpportunity__c) as REF_SBQQ__RenewalOpportunity__c
 
-	INTO StageQA.dbo.Contract_Load
-	FROM SourceQA.dbo.[Contract] Con
+	INTO Stage_Production_SALESFORCE.dbo.Contract_Load
+	FROM Source_Production_SALESFORCE.dbo.[Contract] Con
 	Left join First_Orders O
 		on Con.ID = O.ContractId
-	LEFT JOIN SourceQA.dbo.Account Acct 
+	LEFT JOIN Source_Production_SALESFORCE.dbo.Account Acct 
 		ON Con.AccountID = Acct.ID 
-	LEFT JOIN SourceQA.dbo.SBQQ__Quote__c Qte 
+	LEFT JOIN Source_Production_SALESFORCE.dbo.SBQQ__Quote__c Qte 
 		ON Con.SBQQ__Quote__c = Qte.ID
-	LEFT JOIN SourceQA.dbo.Opportunity Oppty 
+	LEFT JOIN Source_Production_SALESFORCE.dbo.Opportunity Oppty 
 		ON Con.[SBQQ__Opportunity__c] = Oppty.ID
-	LEFT JOIN SourceQA.dbo.OpportunityPartner OP
+	LEFT JOIN Source_Production_SALESFORCE.dbo.OpportunityPartner OP
 		on OP.OpportunityId = Oppty.Id
 		and OP.IsPrimary = 'true'
-	LEFT JOIN SourceQA.dbo.Contact PartnerCon
+	LEFT JOIN Source_Production_SALESFORCE.dbo.Contact PartnerCon
 		on PartnerCon.AccountId = OP.AccountToId 
 		and PartnerCon.Primary_Contact__c = 'true'
 	Where O.StageName = 'Closed Won'
@@ -125,12 +125,12 @@ ORDER BY MAX(Acct.ID);
 ---------------------------------------------------------------------------------
 -- Add Sort Column to speed Bulk Load performance if necessary
 ---------------------------------------------------------------------------------
-ALTER TABLE StageQA.dbo.[Contract_Load]
+ALTER TABLE Stage_Production_SALESFORCE.dbo.[Contract_Load]
 ADD [Sort] int 
 GO
 WITH NumberedRows AS (
   SELECT *, ROW_NUMBER() OVER (ORDER BY REF_AccountId) AS OrderRowNumber
-  FROM StageQA.dbo.[Contract_Load]
+  FROM Stage_Production_SALESFORCE.dbo.[Contract_Load]
 )
 UPDATE NumberedRows
 SET [Sort] = OrderRowNumber;
@@ -140,15 +140,15 @@ SET [Sort] = OrderRowNumber;
 -- Validations
 ---------------------------------------------------------------------------------
 select ID, count(Contract_Migration_Id__c) -- Change to migrated ID if added to object
-from StageQA.dbo.[Contract_Load]
+from Stage_Production_SALESFORCE.dbo.[Contract_Load]
 group by ID
 having count(*) > 1
 
-select * from StageQA.dbo.[Contract_Load]
+select * from Stage_Production_SALESFORCE.dbo.[Contract_Load]
 
 /*
 select *
- from StageQA.dbo.[Contract_Load]
+ from Stage_Production_SALESFORCE.dbo.[Contract_Load]
 where ID = '8003t000008OIF1AAO'
 */
 
@@ -160,8 +160,8 @@ where ID = '8003t000008OIF1AAO'
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 
-USE StageQA; -- uncheck box
-EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','SANDBOX_QA','Contract_Load'
+USE Stage_Production_SALESFORCE; -- uncheck box
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','Production_SALESFORCE','Contract_Load'
 ----- ^^^^^^^^^ 1 records are failing with the error below  ^^^^^^^^^ -----
 --- https://docs.google.com/spreadsheets/d/19x56hjw2SrNQlS0aZpXwjUMAs-kq6NcjJ0pUV8K5tEM/edit?usp=sharing
 -- 
@@ -182,9 +182,9 @@ where Error not like '%Success%'
 -----
 -- Remove all products from contract renewal opportunity
 -----
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'OpportunityLineItem_DELETE' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.OpportunityLineItem_DELETE;
+DROP TABLE Stage_Production_SALESFORCE.dbo.OpportunityLineItem_DELETE;
 
 DECLARE @RedwoodNewDeal2024 VARCHAR(100);
 DECLARE @RedwoodLegacyDeal VARCHAR(100);
@@ -197,10 +197,10 @@ select
 	OLI.ID as Id,
 	CAST('' as nvarchar(255)) as Error -- only need ID and a spot for errors to delete an object
 into OpportunityLineItem_DELETE
-from SourceQA.dbo.OpportunityLineItem OLI
-	INNER JOIN SourceQA.[dbo].Opportunity O
+from Source_Production_SALESFORCE.dbo.OpportunityLineItem OLI
+	INNER JOIN Source_Production_SALESFORCE.[dbo].Opportunity O
 		on O.ID = OLI.OpportunityID
-	LEFT JOIN SourceQA.dbo.Contract con
+	LEFT JOIN Source_Production_SALESFORCE.dbo.Contract con
 		on con.Id = O.SBQQ__RenewedContract__c
 where (
 	O.IsClosed = 'false'
@@ -210,44 +210,44 @@ where (
 	and O.Pricebook2Id not in (@RedwoodNewDeal2024, @RedwoodLegacyDeal)
 )
 
-ALTER TABLE StageQA.dbo.OpportunityLineItem_DELETE
+ALTER TABLE Stage_Production_SALESFORCE.dbo.OpportunityLineItem_DELETE
 ADD [Sort] int IDENTITY (1,1)
 
 ---- make a stash of the opportunity line items about to be deleted
 -- this can be used to re upload them later
--- EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','OpportunityLineItem','PKCHUNK'
+-- EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','OpportunityLineItem','PKCHUNK'
 
--- DROP TABLE SourceQA.dbo.OpportunityLineItemStash;
+-- DROP TABLE Source_Production_SALESFORCE.dbo.OpportunityLineItemStash;
 
 -- drop table OpportunityLineItemStash
 select * 
 into OpportunityLineItemStash2
-from SourceQA.dbo.OpportunityLineItem
+from Source_Production_SALESFORCE.dbo.OpportunityLineItem
 where Id in (
-	select Id from StageQA.dbo.OpportunityLineItem_DELETE
+	select Id from Stage_Production_SALESFORCE.dbo.OpportunityLineItem_DELETE
 )
 
 -- these should match
 select count(distinct Id) from OpportunityLineItemStash2
-select count(distinct Id) from StageQA.dbo.OpportunityLineItem_DELETE
+select count(distinct Id) from Stage_Production_SALESFORCE.dbo.OpportunityLineItem_DELETE
 
 -- execute delete
-EXEC SF_TableLoader 'Delete','[SANDBOX_QA]','OpportunityLineItem_DELETE'
+EXEC SF_TableLoader 'Delete','[Production_SALESFORCE]','OpportunityLineItem_DELETE'
 -- took a ton of time and failed many records: https://oneredwood--qa.sandbox.lightning.force.com/lightning/setup/AsyncApiJobStatus/page?address=%2F750O9000002VVmM%3FsfdcIFrameOrigin%3Dhttps%253A%252F%252Foneredwood--qa.sandbox.lightning.force.com%26clc%3D1
 
 -- scope errors
-select count(*) from SourceQA.dbo.OpportunityLineItem
-select count(*) from SourceQA.dbo.OpportunityLineItem where id in (select id from OpportunityLineItemStash2) -- seems like the delete did not work on about 19k records
+select count(*) from Source_Production_SALESFORCE.dbo.OpportunityLineItem
+select count(*) from Source_Production_SALESFORCE.dbo.OpportunityLineItem where id in (select id from OpportunityLineItemStash2) -- seems like the delete did not work on about 19k records
 
 
 select Error, count(*)
---into StageQA.dbo.Order_DELETE2
-from StageQA.dbo.OpportunityLineItem_DELETE_Result
+--into Stage_Production_SALESFORCE.dbo.Order_DELETE2
+from Stage_Production_SALESFORCE.dbo.OpportunityLineItem_DELETE_Result
 where error not like '%Success%'
 group by error
 
 select *
-from StageQA.dbo.OpportunityLineItem_DELETE_Result
+from Stage_Production_SALESFORCE.dbo.OpportunityLineItem_DELETE_Result
 where error not like '%ENTITY_IS_DELETED:entity is deleted:--%'
 
 
@@ -255,9 +255,9 @@ where error not like '%ENTITY_IS_DELETED:entity is deleted:--%'
 -- update opportunities with contract renwal pricebook ID
 -----
 -- this uses the renewal opportunity and pricebook from the contract load then pushes the pricebook to the renewal opp
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Opportunity_Load' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.Opportunity_Load;
+DROP TABLE Stage_Production_SALESFORCE.dbo.Opportunity_Load;
 
 DECLARE @RedwoodNewDeal2024 VARCHAR(100); 
 DECLARE @RedwoodLegacyDeal VARCHAR(100);
@@ -275,7 +275,7 @@ CONCAT_WS('-',o.Migration_Opportunity__c,O.Id) as Migration_Opportunity__c, -- j
 case when (O.Pricebook2Id = @TieredPriceBook2023) then @RedwoodNewDeal2024 else @RedwoodLegacyDeal end as Pricebook2Id --coalesce
 
 into Opportunity_Load
-from SourceQA.dbo.Opportunity O
+from Source_Production_SALESFORCE.dbo.Opportunity O
 where (
 	O.IsClosed = 'false'
 	and O.Type in ('New Business','Renewal Business')
@@ -288,24 +288,24 @@ where (
 select * from Opportunity_Load -- why is this only 16 opportunities?
 ------------------------------------
 
-USE StageQA;
-EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(5)','SANDBOX_QA','Opportunity_Load'
+USE Stage_Production_SALESFORCE;
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(5)','Production_SALESFORCE','Opportunity_Load'
 
 select Error, count(*)
---into StageQA.dbo.Order_DELETE2
-from StageQA.dbo.Opportunity_Load_Result
+--into Stage_Production_SALESFORCE.dbo.Order_DELETE2
+from Stage_Production_SALESFORCE.dbo.Opportunity_Load_Result
 where error not like '%Success%'
 group by error
 
 select *
-from StageQA.dbo.Opportunity_Load_Result
+from Stage_Production_SALESFORCE.dbo.Opportunity_Load_Result
 where error not like '%Success%'
 								
 --- check box ---
 
 ----------------
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Contract_Bundle_Check_Load' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.Contract_Bundle_Check_Load;
+DROP TABLE Stage_Production_SALESFORCE.dbo.Contract_Bundle_Check_Load;
 
 select 
 cl.ID as Id
@@ -318,24 +318,24 @@ from Contract_Load cl
 select * from Contract_Bundle_Check_Load
 --------------------------------
 
-EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(1)','SANDBOX_QA','Contract_Bundle_Check_Load'
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(1)','Production_SALESFORCE','Contract_Bundle_Check_Load'
 ---------------------------------------------------------------------------------
 -- Error Review	
 ---------------------------------------------------------------------------------
 
--- Select error, * from StageQA.dbo.Contract_Load_Result a where error not like '%success%'
+-- Select error, * from Stage_Production_SALESFORCE.dbo.Contract_Load_Result a where error not like '%success%'
 Select
 error,
 count(*)
-from StageQA.dbo.Contract_Bundle_Check_Load_Result a where error not like '%success%'
+from Stage_Production_SALESFORCE.dbo.Contract_Bundle_Check_Load_Result a where error not like '%success%'
 group by error
 
 Select
 *
-from StageQA.dbo.Contract_Bundle_Check_Load_Result a where error not like '%success%'
+from Stage_Production_SALESFORCE.dbo.Contract_Bundle_Check_Load_Result a where error not like '%success%'
 
 
 Select
-* from StageQA.dbo.Contract_Load_Result a where REF_AccountId = '0013t00002Qps2cAAB'
+* from Stage_Production_SALESFORCE.dbo.Contract_Load_Result a where REF_AccountId = '0013t00002Qps2cAAB'
 
 -- NOTE WITH UPDATES, DO NOT USE DBAMP'S DELETE. SAVE THE ORIGINAL VALUE AND JUST SET IT BACK WITH ANOTHER UPDATE

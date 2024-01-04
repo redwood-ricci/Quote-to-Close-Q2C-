@@ -15,25 +15,25 @@
 ---------------------------------------------------------------------------------
 -- Replicate Data
 ---------------------------------------------------------------------------------
-USE SourceQA;
+USE Source_Production_SALESFORCE;
 
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'OrderItem','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE', 'OrderItem','PKCHUNK'
 
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Contract','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'SBQQ__Subscription__c','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE', 'Contract','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE', 'SBQQ__Subscription__c','PKCHUNK'
 
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'SBQQ__Subscription__c_Load' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.SBQQ__Subscription__c_Load
+DROP TABLE Stage_Production_SALESFORCE.dbo.SBQQ__Subscription__c_Load
 
 ---------------------------------------------------------------------------------
 -- Create Staging Table
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
 Select
 	S.ID as [ID],
@@ -51,10 +51,10 @@ Select
 	S.[SBQQ__Product__c] as REF_ProductID, 
 	S.[SBQQ__QuoteLine__c] as REF_QuoteLine
 
-	INTO StageQA.dbo.SBQQ__Subscription__c_Load
+	INTO Stage_Production_SALESFORCE.dbo.SBQQ__Subscription__c_Load
 
-	FROM SourceQA.dbo.SBQQ__Subscription__c S
-	--inner join SourceQA.dbo.OrderItem OI
+	FROM Source_Production_SALESFORCE.dbo.SBQQ__Subscription__c S
+	--inner join Source_Production_SALESFORCE.dbo.OrderItem OI
 		--on S.ID = OI.Order_Item_Migration_id__c -- Need to have this field created with unique and external on OrderItem
 	WHERE S.SBQQ__Product__c IN ('01t3t000006eKWqAAM','01t3t000006eKpgAAE','01t3t000006eKn6AAE','01t3t000006eKnGAAU','01t3t000006eKmCAAU','01t3t000006rE6RAAU',
 	'01t3t000006eKpmAAE','01t3t000006eKnSAAU','01t3t000006eKmzAAE','01t3t000006e98hAAA','01t3t000006eKnJAAU','01t3t000006eKpJAAU','01t3t000006eKnBAAU','01t3t000006eKqEAAU',
@@ -91,12 +91,12 @@ Select
 -- Add Sort Column to speed Bulk Load performance if necessary
 ---------------------------------------------------------------------------------
 
-ALTER TABLE StageQA.dbo.SBQQ__Subscription__c_Load
+ALTER TABLE Stage_Production_SALESFORCE.dbo.SBQQ__Subscription__c_Load
 ADD [Sort] int 
 GO
 WITH NumberedRows AS (
   SELECT *, ROW_NUMBER() OVER (ORDER BY REF_ContractID) AS OrderRowNumber
-  FROM StageQA.dbo.SBQQ__Subscription__c_Load
+  FROM Stage_Production_SALESFORCE.dbo.SBQQ__Subscription__c_Load
 )
 UPDATE NumberedRows
 SET [Sort] = OrderRowNumber;
@@ -106,12 +106,12 @@ SET [Sort] = OrderRowNumber;
 -- Validations
 ---------------------------------------------------------------------------------
 select OrderProduct_Migration_id__c, count(*) 
-from StageQA.dbo.SBQQ__Subscription__c_Load
+from Stage_Production_SALESFORCE.dbo.SBQQ__Subscription__c_Load
 group by OrderProduct_Migration_id__c
 having count(*) > 1
 
 select *
- from StageQA.dbo.SBQQ__Subscription__c_Load
+ from Stage_Production_SALESFORCE.dbo.SBQQ__Subscription__c_Load
 
 
 ---------------------------------------------------------------------------------
@@ -122,20 +122,20 @@ select *
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
-EXEC StageQA.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','SANDBOX_QA','SBQQ__Subscription__c_Load'
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(10)','Production_SALESFORCE','SBQQ__Subscription__c_Load'
 
 ---------------------------------------------------------------------------------
 -- Error Review	
 ---------------------------------------------------------------------------------
 
--- USE StageQA; Select error, * from SBQQ__Subscription__c_Load_Result a where error not like '%success%'
+-- USE Stage_Production_SALESFORCE; Select error, * from SBQQ__Subscription__c_Load_Result a where error not like '%success%'
 
 
--- USE StageQA; EXEC SF_Tableloader 'HardDelete:batchsize(10)', 'SANDBOX_QA', 'SBQQ__QuoteLine__c_Load_Result'
+-- USE Stage_Production_SALESFORCE; EXEC SF_Tableloader 'HardDelete:batchsize(10)', 'Production_SALESFORCE', 'SBQQ__QuoteLine__c_Load_Result'
 
--- USE StageQA; EXEC SF_Tableloader 'Delete:batchsize(10)', 'SANDBOX_QA', 'SBQQ__QuoteLine__c_Load2_Result'
+-- USE Stage_Production_SALESFORCE; EXEC SF_Tableloader 'Delete:batchsize(10)', 'Production_SALESFORCE', 'SBQQ__QuoteLine__c_Load2_Result'
 
 
 -- NOTE WITH UPDATES, DO NOT USE DBAMP'S DELETE. SAVE THE ORIGINAL VALUE AND JUST SET IT BACK WITH ANOTHER UPDATE
