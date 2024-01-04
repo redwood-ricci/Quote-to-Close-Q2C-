@@ -18,18 +18,18 @@
 ---------------------------------------------------------------------------------
 -- Replicate Data
 ---------------------------------------------------------------------------------
-USE SourceQA;
+USE [Source_Production_SALESFORCE];
 
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Account','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','PriceBook2','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','sbqq__Quote__c','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','SBQQ__Quoteline__c','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Opportunity','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Contract','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Order','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Invoice__c','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','Account','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','PriceBook2','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','sbqq__Quote__c','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','SBQQ__Quoteline__c','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','Opportunity','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','Contract','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','Order','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','Invoice__c','PKCHUNK'
 
--- select * from SourceQA.dbo.[Order]
+-- select * from Source_Production_SALESFORCE.dbo.[Order]
 
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
@@ -43,7 +43,7 @@ DROP TABLE Stage_Production_SALESFORCE.dbo.[Order_Load]
 ---------------------------------------------------------------------------------
 -- Create Staging Table
 ---------------------------------------------------------------------------------
--- select primary from SourceQA.dbo.Opportunity where id = '0063t000012TzCQAA0'
+-- select primary from Source_Production_SALESFORCE.dbo.Opportunity where id = '0063t000012TzCQAA0'
 
 DECLARE @RedwoodNewDeal2024 VARCHAR(100); -- Declares a string variable with a maximum length of 100 characters.
 DECLARE @RedwoodLegacyDeal VARCHAR(100);
@@ -67,10 +67,10 @@ WITH Contract_Subscription_Match as (
 					when(Sub.SBQQ__SegmentStartDate__c < Con.[StartDate] or Sub.SBQQ__SegmentStartDate__c > Con.EndDate) then Con.[StartDate] 
 					else Sub.SBQQ__SegmentStartDate__c end), Con.[StartDate])) as SubYear
 
-	from SourceQA.dbo.Sbqq__Subscription__c Sub
-		left join SourceQA.dbo.Contract Con
+	from Source_Production_SALESFORCE.dbo.Sbqq__Subscription__c Sub
+		left join Source_Production_SALESFORCE.dbo.Contract Con
 			on Sub.Sbqq__Contract__c = Con.Id
-		left join SourceQA.dbo.Account Acct
+		left join Source_Production_SALESFORCE.dbo.Account Acct
 			on Acct.Id = Con.AccountId
 	where EndDate >= '2022-01-01'
 		and Status in ('Activated','Expired','Cancelled')
@@ -155,25 +155,25 @@ Select
 into Stage_Production_SALESFORCE.dbo.[Order_Load]
 
 FROM Yearly_Subscriptions_By_Contract YSC
-left join SourceQA.dbo.[Contract] Con
+left join Source_Production_SALESFORCE.dbo.[Contract] Con
 	on YSC.ContractId = Con.Id
-inner join SourceQA.dbo.SBQQ__Subscription__c Sub
+inner join Source_Production_SALESFORCE.dbo.SBQQ__Subscription__c Sub
 	on Sub.Id = YSC.SubscriptionId
-left join SourceQA.dbo.Invoice__c inv
+left join Source_Production_SALESFORCE.dbo.Invoice__c inv
 	on inv.Id = Sub.Invoice__c
-left join SourceQA.dbo.SBQQ__Quote__c Qte
+left join Source_Production_SALESFORCE.dbo.SBQQ__Quote__c Qte
 	on Con.SBQQ__Quote__c = Qte.ID 
-left join SourceQA.dbo.Opportunity O
+left join Source_Production_SALESFORCE.dbo.Opportunity O
 	on Con.SBQQ__Opportunity__c = O.ID
-left join SourceQA.dbo.Opportunity RO -- When Opportunity & Quote are missing on Contract, we are using the Renewal Opportunity to get the PriceBookId
+left join Source_Production_SALESFORCE.dbo.Opportunity RO -- When Opportunity & Quote are missing on Contract, we are using the Renewal Opportunity to get the PriceBookId
 	on Con.SBQQ__RenewalOpportunity__c = RO.ID
-left join SourceQA.dbo.Account Acct
+left join Source_Production_SALESFORCE.dbo.Account Acct
 	on Con.AccountId = Acct.ID
-left join SourceQA.dbo.SBQQ__Quoteline__c qtl
+left join Source_Production_SALESFORCE.dbo.SBQQ__Quoteline__c qtl
 	on Sub.SBQQ__QuoteLine__c = qtl.Id
-left join SourceQA.dbo.SBQQ__Quote__c LineQte
+left join Source_Production_SALESFORCE.dbo.SBQQ__Quote__c LineQte
 	on LineQte.Id = qtl.SBQQ__Quote__c
-left join SourceQA.dbo.Opportunity LineOpp
+left join Source_Production_SALESFORCE.dbo.Opportunity LineOpp
 	on LineOpp.SBQQ__PrimaryQuote__c = Qte.Id
 
 Where 
@@ -267,7 +267,7 @@ USE Stage_Production_SALESFORCE;
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 
-EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(20)','SANDBOX_QA','Order_Load'
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(20)','Production_SALESFORCE','Order_Load'
 -- Error rows: https://docs.google.com/spreadsheets/d/13RQYid_LLjGiN16ICKbkwITOvvmd_9LWBcYWktStsn4/edit#gid=0
 -- one error where subscription start date is after segment end date
 
@@ -305,7 +305,7 @@ and error not like '%DUPLICATE_VALUE%'
 and error like 'UNABLE_TO_LOCK_ROW:%')
 select * from Order_Reload
 
-EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(2)','SANDBOX_QA','Order_Reload'
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(1)','Production_SALESFORCE','Order_Reload'
 
 ---- check for errors on reload
 Select error, count(*) as num from Order_Reload_Result a
@@ -457,4 +457,4 @@ SELECT *
 	,
 */
 
--- EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'DELETE','SANDBOX_QA','Order_Load_result'
+-- EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'DELETE','Production_SALESFORCE','Order_Load_result'

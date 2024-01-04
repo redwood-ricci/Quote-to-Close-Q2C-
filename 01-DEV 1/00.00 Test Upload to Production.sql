@@ -79,3 +79,5 @@ FROM Source_Production_SALESFORCE.dbo.Account A
 ----------------------------------------------------------------------Quote BACKUP----------------------------------------------------------------------
 
 select * FROM [Salesforce backups].dbo.Opportunity_Backup
+
+

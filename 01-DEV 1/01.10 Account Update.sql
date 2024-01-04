@@ -16,8 +16,8 @@ USE [Source_Production_SALESFORCE];
 ​
 EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE', 'Account'
 
--- EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'User'
---EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'RecordType'
+-- EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE', 'User'
+--EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE', 'RecordType'
 ​
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
@@ -37,24 +37,24 @@ Select
 	CAST('' as nvarchar(2000)) as Error,
 -- MIGRATION FIELDS 																						
 	A.ID + '-NEO' as Account_Migration_Id__c,
-	BillingCountry
-,BillingCountryCode
-,Agreement_Contract_Payment_Terms__c
+--	BillingCountry
+--,BillingCountryCode
+Agreement_Contract_Payment_Terms__c
 ,SBQQ__RenewalPricingMethod__c
 --,Id
 ,IsPartner
-,Legal_Entity_Name__c
-,[Name]
-,Partner__c
-,Partner_End_Date__c
-,Partner_Product__c
-,Partner_Start_Date__c
-,Partner_Status__c
-,Partner_Type__c
-,Primary_Partner_Reseller__c
-,RW_Partner_ID__c
-,ShippingCountry
-,ShippingCountryCode
+--,Legal_Entity_Name__c
+--,[Name]
+--,Partner__c
+--,Partner_End_Date__c
+--,Partner_Product__c
+--,Partner_Start_Date__c
+--,Partner_Status__c
+--,Partner_Type__c
+--,Primary_Partner_Reseller__c
+--,RW_Partner_ID__c
+--,ShippingCountry
+--,ShippingCountryCode
 ,[Type]
 ,convert(varchar(50),Null) as [Record Type Name]
 ,convert(varchar(50),Null) as [RecordTypeId]
@@ -65,7 +65,7 @@ Select
 INTO Stage_Production_SALESFORCE.dbo.Account_Load
 FROM Source_Production_SALESFORCE.dbo.Account a
 ​
---select ID,Case_Safe_Account_ID__c,Customer_Status__c,X18_Digit_Account_ID__c FROM SourceQA.dbo.Account a
+--select ID,Case_Safe_Account_ID__c,Customer_Status__c,X18_Digit_Account_ID__c FROM Source_Production_SALESFORCE.dbo.Account a
 update A set 
 [RecordTypeId]='012Qn000000vtNxIAI', --Make sure to update this ID with the Production 'Partner Account' Record Type Id
 [IsPartner]='true'
@@ -109,7 +109,7 @@ update A set
 from Stage_Production_SALESFORCE.dbo.Account_Load A
 where [SBQQ__RenewalPricingMethod__c] != 'Uplift'
 ​
---select * from StageQA.dbo.Account_Load A
+--select * from Stage_Production_SALESFORCE.dbo.Account_Load A
 ​
 -- Surgical Filters to make sure each update doesn't go beyond the scope of the update
 	
@@ -137,10 +137,10 @@ select *
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 ​
-EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(100)','SANDBOX_QA','Account_Load'
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'UPDATE:bulkapi,batchsize(50)','Production_SALESFORCE','Account_Load'
 ​
 ---------------------------------------------------------------------------------
 -- Error Review	
 ---------------------------------------------------------------------------------
 ​
--- Select error, * from StageQA.dbo.Account_Load_Result a where error not like '%success%'
+Select error, * from Stage_Production_SALESFORCE.dbo.Account_Load_Result a where error not like '%success%'
