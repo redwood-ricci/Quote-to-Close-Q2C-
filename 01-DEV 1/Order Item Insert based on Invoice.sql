@@ -83,7 +83,7 @@ select
 	left join SourceQA.dbo.Contract Con
 		on Con.Id = Inv.Related_Contract__c
 
-	WHERE Inv.Billing_Period_1_Start__c >= '2022-01-01'
+	WHERE Inv.Billing_Period_Start__c >= '2022-01-01'
 
 
 	
