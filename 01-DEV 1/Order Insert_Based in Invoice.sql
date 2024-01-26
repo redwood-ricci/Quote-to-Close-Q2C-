@@ -20,36 +20,36 @@
 ---------------------------------------------------------------------------------
 USE [Source_Production_SALESFORCE];
 
-EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','Account','PKCHUNK'
 EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','Invoice__c','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','Order','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','Account','PKCHUNK'
 EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','PriceBook2','PKCHUNK'
 EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','sbqq__Quote__c','PKCHUNK'
 EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','SBQQ__Quoteline__c','PKCHUNK'
 EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','Opportunity','PKCHUNK'
 EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','Contract','PKCHUNK'
-EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'Production_SALESFORCE','Order','PKCHUNK'
 
 
-USE SourceQA;
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Order','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA', 'Invoice__c','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Opportunity','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Contract','PKCHUNK'
-EXEC SourceQA.dbo.SF_Replicate 'SANDBOX_QA','Account','PKCHUNK'
+USE Source_Production_SALESFORCE;
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'SANDBOX_QA','Order','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'SANDBOX_QA', 'Invoice__c','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'SANDBOX_QA','Opportunity','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'SANDBOX_QA','Contract','PKCHUNK'
+EXEC Source_Production_SALESFORCE.dbo.SF_Replicate 'SANDBOX_QA','Account','PKCHUNK'
 
 
 ---------------------------------------------------------------------------------
 -- Drop Staging Table
 ---------------------------------------------------------------------------------
 
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Order_Load' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.[Order_Load]
+DROP TABLE Stage_Production_SALESFORCE.dbo.[Order_Load]
 
 
 Select 
-	 CAST('' AS nvarchar(18)) AS [ID],
+	 coalesce(Ord.Id,CAST('' AS nvarchar(18))) AS [ID],
 	CAST('' as nvarchar(2000)) as Error
 	,coalesce(Inv.Related_Account__c, Opp.AccountId) as AccountID
 	,Inv.Invoice_Status__c as Invoice_Status__c
@@ -65,7 +65,7 @@ Select
 	--,Opp.SBQQ__PrimaryQuote__c as SBQQ__Quote__c
 
  	--,Con.ID as ContractId
-	,Con.Id as Contract__c
+	,Inv.Related_Contract__c as Contract__c
 
 	,'Single Contract' as SBQQ__ContractingMethod__c --Picklist Single Contract or By Subscription End Date --"By Subscription End Date" creates a separate Contract for each unique Subscription End Date, containing only those Subscriptions. "Single Contract" creates one Contract containing all Subscriptions, regardless of their End Dates.
 	,('Draft') as [Status]
@@ -113,56 +113,56 @@ Select
 
 	,Inv.Id as Invoice__c
 
-	into StageQA.dbo.[Order_Load]
+	into Stage_Production_SALESFORCE.dbo.[Order_Load]
 
-	FROM SourceQA.dbo.Invoice__c Inv
-	left join SourceQA.dbo.Account Acct
+	FROM Source_Production_SALESFORCE.dbo.Invoice__c Inv
+	left join Source_Production_SALESFORCE.dbo.Account Acct
 		on Inv.Related_Account__c = Acct.Id
-	inner join SourceQA.dbo.Opportunity Opp
+	inner join Source_Production_SALESFORCE.dbo.Opportunity Opp
 		on Inv.Related_Opportunity__c = Opp.Id
-	left join SourceQA.dbo.Contract Con
+	left join Source_Production_SALESFORCE.dbo.Contract Con
 		on Con.Id = Inv.Related_Contract__c
-	left join SourceQA.dbo.[Order] Ord
+	left join Source_Production_SALESFORCE.dbo.[Order] Ord
 		on Ord.Order_Migration_id__c = inv.Id
 
-	WHERE Inv.Billing_Period_Start__c > '2022-01-01'
-	--and Ord.Id is null
+	WHERE Inv.Billing_Period_Start__c >= '2022-01-01'
+	and Ord.Id is not null
 
 
 
-ALTER TABLE StageQA.dbo.[Order_Load]
+ALTER TABLE Stage_Production_SALESFORCE.dbo.[Order_Load]
 ADD [Sort] int 
 GO
 WITH NumberedRows AS (
   SELECT *, ROW_NUMBER() OVER (ORDER BY AccountID) AS OrderRowNumber
-  FROM StageQA.dbo.[Order_Load]
+  FROM Stage_Production_SALESFORCE.dbo.[Order_Load]
 )
 UPDATE NumberedRows
 SET [Sort] = OrderRowNumber;
 
 select Order_Migration_id__c, count(*)
-from StageQA.dbo.[Order_Load]
+from Stage_Production_SALESFORCE.dbo.[Order_Load]
 group by Order_Migration_id__c
 having count(*) > 1
 
 
 update x
 set Licenses_Sent__c= 'false'
-from StageQA.dbo.[Order_Load] x
+from Stage_Production_SALESFORCE.dbo.[Order_Load] x
 where Licenses_Sent__c is null
 
 
 select *
- from StageQA.dbo.[Order_Load]
+ from Stage_Production_SALESFORCE.dbo.[Order_Load]
 
  
-USE StageQA;
+USE Stage_Production_SALESFORCE;
 
 ---------------------------------------------------------------------------------
 -- Load Data to Salesforce
 ---------------------------------------------------------------------------------
 
-EXEC StageQA.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(50)','SANDBOX_QA','Order_Load', 'Id'
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'UPSERT:bulkapi,batchsize(50)','Production_SALESFORCE','Order_Load', 'Id'
 
 select * from Order_Load_Result where error not like '%success%'
 
@@ -173,7 +173,7 @@ order by num desc
 
 
 if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = 'Order_Reload' AND TABLE_SCHEMA = 'dbo')
-DROP TABLE StageQA.dbo.Order_Reload
+DROP TABLE Stage_Production_SALESFORCE.dbo.Order_Reload
 
 select * into Order_Reload from Order_Load where Order_Migration_id__c in (
 select Order_Migration_id__c from Order_Load_Result
@@ -184,8 +184,19 @@ select Licenses_Sent__c from Order_Reload where Licenses_Sent__c is not null
 
 update x
 set Licenses_Sent__c= 'false'
-from StageQA.dbo.[Order_Reload] x
+from Stage_Production_SALESFORCE.dbo.[Order_Reload] x
 where Licenses_Sent__c is null
 
 
-EXEC StageQA.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(10)','SANDBOX_QA','Order_Reload'
+EXEC Stage_Production_SALESFORCE.dbo.SF_Tableloader 'INSERT:bulkapi,batchsize(1)','Production_SALESFORCE','Order_Reload'
+
+select * from Order_Reload_Result where  error not like '%success%'
+
+-------------------Validation-----------------------
+
+
+select (inv.Amount__c) as InvoiceAmount, (Ord.TotalAmount) as OrderTotal from Source_Production_SALESFORCE.dbo.[Order] Ord 
+	inner join Source_Production_SALESFORCE.dbo.Invoice__c inv
+		on inv.Id = Ord.Invoice__c 
+		and ord.TotalAmount != inv.Amount__c
+	where ord.Order_Migration_id__c is not null
